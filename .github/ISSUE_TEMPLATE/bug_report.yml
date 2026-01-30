@@ -1,0 +1,94 @@
+name: Bug Report
+description: Report a bug in the Discovery Agent
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: Affected Service
+      description: Which service is affected?
+      options:
+        - Network Scanner (Go)
+        - Code Analyzer (Python)
+        - Database Inspector (Python)
+        - Event Bus / RabbitMQ
+        - Enrichment Pipeline
+        - PII Redactor
+        - Approval API
+        - Approval UI
+        - Transmitter
+        - Docker / Infrastructure
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Start service with '...'
+        2. Send request to '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Please copy and paste any relevant log output.
+      render: shell
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment Method
+      options:
+        - Docker Compose
+        - Kubernetes / Helm
+        - Standalone Binary
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version are you running?
+      placeholder: e.g., v0.1.0 or commit SHA
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched for existing issues
+          required: true
+        - label: I have included relevant logs
+          required: false
