@@ -4,7 +4,7 @@
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to security@example.com (update with actual contact).
+Instead, please report them via email to cryptoyogi.llc@gmail.com.
 
 Include:
 - Type of issue
