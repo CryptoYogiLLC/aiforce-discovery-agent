@@ -1,0 +1,172 @@
+version: '3.8'
+
+# =============================================================================
+# DEVELOPMENT ENVIRONMENT
+# =============================================================================
+# This compose file creates a simulated target environment for testing
+# the discovery agent without needing access to a real client network.
+#
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up -d
+#
+# This creates:
+#   - Simulated servers (web, app, db servers)
+#   - Sample databases with schemas
+#   - Sample code repositories
+#   - Network segments for scanning
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # SIMULATED TARGET NETWORK
+  # ===========================================================================
+
+  # Web Server (nginx)
+  target-web-01:
+    image: nginx:alpine
+    container_name: target-web-01
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "8080:80"
+      - "8443:443"
+
+  # Application Server (Python/Flask)
+  target-app-01:
+    image: python:3.11-slim
+    container_name: target-app-01
+    command: >
+      sh -c "pip install flask && python -c \"
+      from flask import Flask
+      app = Flask(__name__)
+      @app.route('/')
+      def home(): return 'App Server 01'
+      app.run(host='0.0.0.0', port=5000)
+      \""
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.20
+    ports:
+      - "5000:5000"
+
+  # Java Application Server
+  target-app-02:
+    image: openjdk:17-slim
+    container_name: target-app-02
+    command: >
+      sh -c "echo 'Java app server running' && tail -f /dev/null"
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.21
+    ports:
+      - "8081:8080"
+
+  # ===========================================================================
+  # SIMULATED DATABASES
+  # ===========================================================================
+
+  # PostgreSQL (ERP System)
+  target-db-postgres:
+    image: postgres:16
+    container_name: target-db-postgres
+    environment:
+      POSTGRES_USER: erp_admin
+      POSTGRES_PASSWORD: erp_password
+      POSTGRES_DB: erp_system
+    volumes:
+      - ./test-fixtures/postgres-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.30
+    ports:
+      - "5433:5432"
+
+  # MySQL (Legacy CRM)
+  target-db-mysql:
+    image: mysql:8
+    container_name: target-db-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: legacy_crm
+      MYSQL_USER: crm_user
+      MYSQL_PASSWORD: crm_password
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.31
+    ports:
+      - "3307:3306"
+
+  # MongoDB (Analytics)
+  target-db-mongo:
+    image: mongo:7
+    container_name: target-db-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: analytics_admin
+      MONGO_INITDB_ROOT_PASSWORD: analytics_password
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.32
+    ports:
+      - "27018:27017"
+
+  # Redis (Cache)
+  target-cache-redis:
+    image: redis:7-alpine
+    container_name: target-cache-redis
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.40
+    ports:
+      - "6380:6379"
+
+  # ===========================================================================
+  # SIMULATED CODE REPOSITORIES
+  # ===========================================================================
+
+  # Gitea (self-hosted Git)
+  target-git-server:
+    image: gitea/gitea:latest
+    container_name: target-git-server
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    volumes:
+      - gitea_data:/data
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.50
+    ports:
+      - "3030:3000"
+      - "2222:22"
+
+  # ===========================================================================
+  # SIMULATED INFRASTRUCTURE
+  # ===========================================================================
+
+  # SSH Jump Server
+  target-ssh-bastion:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: target-ssh-bastion
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - PASSWORD_ACCESS=true
+      - USER_PASSWORD=bastion_password
+      - USER_NAME=admin
+    networks:
+      target-network:
+        ipv4_address: 172.28.0.5
+    ports:
+      - "2223:2222"
+
+networks:
+  target-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
+
+volumes:
+  gitea_data:
