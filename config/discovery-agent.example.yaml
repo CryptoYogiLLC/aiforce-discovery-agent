@@ -1,0 +1,110 @@
+# AIForce Discovery Agent Configuration
+# Copy this file to discovery-agent.yaml and customize
+
+# =============================================================================
+# COLLECTION SETTINGS
+# =============================================================================
+collection:
+  # Enable/disable collectors
+  network_scan: true
+  code_repos: false        # Requires repo access - opt-in only
+  database_schemas: true
+  api_endpoints: false     # Requires sidecar deployment
+
+  # Network scope
+  include_subnets:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+
+  exclude_subnets:
+    - 10.0.99.0/24         # Example: sensitive zone
+
+  exclude_servers:
+    - "*-pci-*"            # Example: PCI servers
+    - "prod-payment-*"
+
+  exclude_databases:
+    - "*_audit"
+    - "*_pii"
+
+# =============================================================================
+# DATA HANDLING
+# =============================================================================
+data_handling:
+  # Automatic PII redaction
+  redact_emails: true
+  redact_ip_addresses: false    # Set true if IPs are sensitive
+  redact_hostnames: false
+  redact_usernames: true
+  redact_credentials: true      # Always recommended
+
+  # Custom redaction patterns (regex)
+  custom_patterns:
+    - "SSN-\\d{3}-\\d{2}-\\d{4}"
+    - "ACCT\\d{10}"
+    # Add your own patterns here
+
+# =============================================================================
+# TRANSMISSION SETTINGS
+# =============================================================================
+transmission:
+  # Mode: auto | preview_only | approval_required
+  mode: approval_required
+
+  # Destination (your assessment platform)
+  destination: https://your-assess-instance.com/api/v1/discovery
+
+  # Authentication
+  auth:
+    type: bearer           # bearer | api_key | oauth2
+    # token loaded from environment: DISCOVERY_AGENT_TOKEN
+
+  # Batching
+  batch_size: 100
+  batch_interval_seconds: 60
+
+  # What to send
+  send_raw_metrics: false  # Send aggregates only
+  send_code_snippets: false # Send hashes only
+  send_schema_details: true
+
+# =============================================================================
+# LOCAL STORAGE
+# =============================================================================
+storage:
+  # Local data retention
+  retention_days: 30
+  encrypt_local_cache: true
+
+  # Database
+  postgres:
+    host: localhost
+    port: 5432
+    database: discovery_agent
+    # Credentials from environment: POSTGRES_USER, POSTGRES_PASSWORD
+
+# =============================================================================
+# OBSERVABILITY
+# =============================================================================
+observability:
+  # Metrics
+  prometheus:
+    enabled: true
+    port: 9090
+
+  # Logging
+  log_level: INFO          # DEBUG | INFO | WARNING | ERROR
+  log_format: json         # json | text
+
+# =============================================================================
+# APPROVAL GATEWAY
+# =============================================================================
+gateway:
+  # Web UI
+  port: 3000
+
+  # Authentication (local)
+  auth:
+    type: local            # local | ldap | oidc
+    # For local auth, set GATEWAY_ADMIN_PASSWORD environment variable

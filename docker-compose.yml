@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # INFRASTRUCTURE
+  # =============================================================================
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: discovery
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-discovery}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-discovery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-discovery}
+      POSTGRES_DB: discovery_agent
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U discovery
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # =============================================================================
+  # CORE SERVICES
+  # =============================================================================
+  config-service:
+    build: ./platform/config-service
+    environment:
+      - CONFIG_PATH=/config/discovery-agent.yaml
+    volumes:
+      - ./config:/config:ro
+    depends_on:
+      - rabbitmq
+
+  # =============================================================================
+  # COLLECTORS (use profiles to enable)
+  # =============================================================================
+  network-scanner:
+    build: ./collectors/network-scanner
+    profiles: ["network", "all"]
+    network_mode: host  # Required for network scanning
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@localhost:5672/
+    depends_on:
+      - rabbitmq
+      - config-service
+
+  code-analyzer:
+    build: ./collectors/code-analyzer
+    profiles: ["code", "all"]
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For container inspection
+    depends_on:
+      - rabbitmq
+      - config-service
+
+  db-inspector:
+    build: ./collectors/db-inspector
+    profiles: ["database", "all"]
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+      - config-service
+
+  # =============================================================================
+  # PROCESSING
+  # =============================================================================
+  enrichment:
+    build: ./platform/enrichment
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      - POSTGRES_URL=postgresql://discovery:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+    depends_on:
+      - rabbitmq
+      - postgres
+
+  pii-redactor:
+    build: ./platform/pii-redactor
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+      - enrichment
+
+  # =============================================================================
+  # GATEWAY
+  # =============================================================================
+  approval-api:
+    build: ./gateway/approval-api
+    ports:
+      - "3001:3001"
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      - POSTGRES_URL=postgresql://discovery:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - rabbitmq
+      - postgres
+      - redis
+
+  approval-ui:
+    build: ./gateway/approval-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://approval-api:3001
+    depends_on:
+      - approval-api
+
+  transmitter:
+    build: ./gateway/transmitter
+    environment:
+      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      - DISCOVERY_AGENT_TOKEN=${DISCOVERY_AGENT_TOKEN}
+    depends_on:
+      - rabbitmq
+      - approval-api
+
+volumes:
+  rabbitmq_data:
+  postgres_data:
+  redis_data:
