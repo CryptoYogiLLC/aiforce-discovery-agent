@@ -1,0 +1,36 @@
+apiVersion: v2
+name: discovery-agent
+description: AIForce Discovery Agent - Microservices for cloud modernization discovery
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - discovery
+  - cloud-modernization
+  - aiforce
+  - microservices
+
+home: https://github.com/CryptoYogiLLC/aiforce-discovery-agent
+sources:
+  - https://github.com/CryptoYogiLLC/aiforce-discovery-agent
+
+maintainers:
+  - name: CryptoYogiLLC
+    url: https://github.com/CryptoYogiLLC
+
+dependencies:
+  - name: rabbitmq
+    version: "12.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: rabbitmq.enabled
+
+  - name: postgresql
+    version: "13.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+
+  - name: redis
+    version: "18.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

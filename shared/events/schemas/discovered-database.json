@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/discovered-database.json",
+  "title": "Database Discovered Event",
+  "description": "Event emitted when a database instance is analyzed",
+  "allOf": [
+    { "$ref": "cloudevent-base.json" }
+  ],
+  "properties": {
+    "type": {
+      "const": "discovery.database.discovered"
+    },
+    "source": {
+      "const": "/collectors/db-inspector"
+    },
+    "data": {
+      "type": "object",
+      "required": ["db_type", "host", "scan_timestamp"],
+      "properties": {
+        "db_type": {
+          "type": "string",
+          "enum": ["postgresql", "mysql", "mariadb", "oracle", "sqlserver", "mongodb", "redis", "elasticsearch", "other"]
+        },
+        "host": {
+          "type": "string",
+          "description": "Database host (may be redacted)"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "version": {
+          "type": "string",
+          "description": "Database version"
+        },
+        "databases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "size_mb": { "type": "number" },
+              "table_count": { "type": "integer" },
+              "encoding": { "type": "string" }
+            }
+          }
+        },
+        "schemas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["database", "name"],
+            "properties": {
+              "database": { "type": "string" },
+              "name": { "type": "string" },
+              "tables": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "row_count": { "type": "integer" },
+                    "size_mb": { "type": "number" },
+                    "column_count": { "type": "integer" },
+                    "has_primary_key": { "type": "boolean" },
+                    "index_count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "replication": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "role": {
+              "type": "string",
+              "enum": ["primary", "replica", "standalone"]
+            },
+            "replica_count": { "type": "integer" }
+          }
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          }
+        },
+        "scan_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

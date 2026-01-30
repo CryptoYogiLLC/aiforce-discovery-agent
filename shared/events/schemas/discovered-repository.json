@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/discovered-repository.json",
+  "title": "Repository Discovered Event",
+  "description": "Event emitted when a code repository is analyzed",
+  "allOf": [
+    { "$ref": "cloudevent-base.json" }
+  ],
+  "properties": {
+    "type": {
+      "const": "discovery.repository.discovered"
+    },
+    "source": {
+      "const": "/collectors/code-analyzer"
+    },
+    "data": {
+      "type": "object",
+      "required": ["repo_path", "scan_timestamp"],
+      "properties": {
+        "repo_path": {
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        "repo_name": {
+          "type": "string",
+          "description": "Repository name"
+        },
+        "vcs_type": {
+          "type": "string",
+          "enum": ["git", "svn", "mercurial", "unknown"]
+        },
+        "remote_url": {
+          "type": "string",
+          "description": "Remote repository URL (redacted)"
+        },
+        "primary_language": {
+          "type": "string",
+          "description": "Primary programming language"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "percentage"],
+            "properties": {
+              "name": { "type": "string" },
+              "percentage": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "lines_of_code": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "frameworks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "category": {
+                "type": "string",
+                "enum": ["web", "api", "orm", "testing", "build", "other"]
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["runtime", "dev", "optional"]
+              }
+            }
+          }
+        },
+        "complexity_metrics": {
+          "type": "object",
+          "properties": {
+            "total_files": { "type": "integer" },
+            "total_lines": { "type": "integer" },
+            "avg_cyclomatic_complexity": { "type": "number" },
+            "test_coverage_percent": { "type": "number" }
+          }
+        },
+        "scan_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

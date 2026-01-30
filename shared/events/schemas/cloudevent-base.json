@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/cloudevent-base.json",
+  "title": "CloudEvent Base Schema",
+  "description": "Base schema for all CloudEvents in the Discovery Agent",
+  "type": "object",
+  "required": ["specversion", "type", "source", "id"],
+  "properties": {
+    "specversion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "CloudEvents specification version"
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^discovery\\.[a-z]+\\.[a-z]+$",
+      "description": "Event type in format: discovery.<category>.<action>"
+    },
+    "source": {
+      "type": "string",
+      "format": "uri-reference",
+      "description": "Source of the event (service identifier)"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the event occurred"
+    },
+    "datacontenttype": {
+      "type": "string",
+      "default": "application/json",
+      "description": "Content type of the data field"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Subject of the event (optional context)"
+    },
+    "data": {
+      "type": "object",
+      "description": "Event payload"
+    }
+  }
+}

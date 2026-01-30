@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "discovery-agent.fullname" . }}-config
+  labels:
+    {{- include "discovery-agent.labels" . | nindent 4 }}
+data:
+  discovery-agent.yaml: |
+    collection:
+      network_scan:
+        enabled: {{ .Values.networkScanner.enabled }}
+        {{- if .Values.networkScanner.enabled }}
+        subnets:
+          {{- toYaml .Values.networkScanner.config.scanSubnets | nindent 10 }}
+        exclude_subnets:
+          {{- toYaml .Values.networkScanner.config.excludeSubnets | nindent 10 }}
+        ports:
+          {{- toYaml .Values.networkScanner.config.ports | nindent 10 }}
+        {{- end }}
+
+      code_repos:
+        enabled: {{ .Values.codeAnalyzer.enabled }}
+
+      databases:
+        enabled: {{ .Values.dbInspector.enabled }}
+
+    data_handling:
+      redact_emails: {{ .Values.piiRedactor.config.redactEmails }}
+      redact_ips: {{ .Values.piiRedactor.config.redactIps }}
+      redact_hostnames: {{ .Values.piiRedactor.config.redactHostnames }}
+      redact_usernames: {{ .Values.piiRedactor.config.redactUsernames }}
+
+    transmission:
+      mode: approval_required
+      api_url: {{ .Values.transmitter.config.aiforceApiUrl }}
+      batch_size: {{ .Values.transmitter.config.batchSize }}

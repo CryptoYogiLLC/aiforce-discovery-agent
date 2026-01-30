@@ -1,0 +1,66 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+=============================================================================
+GETTING STARTED
+=============================================================================
+
+1. Get the Approval UI URL:
+{{- if .Values.approvalUi.ingress.enabled }}
+{{- range $host := .Values.approvalUi.ingress.hosts }}
+  http{{ if $.Values.approvalUi.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else }}
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "discovery-agent.fullname" . }}-approval-ui 3000:{{ .Values.approvalUi.service.port }}
+  Then open: http://localhost:3000
+{{- end }}
+
+2. Check the status of all pods:
+  kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. View logs for a service:
+  kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=network-scanner"
+
+=============================================================================
+ENABLED COLLECTORS
+=============================================================================
+{{- if .Values.networkScanner.enabled }}
+  ✓ Network Scanner - Scanning subnets: {{ .Values.networkScanner.config.scanSubnets | join ", " }}
+{{- else }}
+  ✗ Network Scanner - Disabled
+{{- end }}
+{{- if .Values.codeAnalyzer.enabled }}
+  ✓ Code Analyzer - Enabled
+{{- else }}
+  ✗ Code Analyzer - Disabled
+{{- end }}
+{{- if .Values.dbInspector.enabled }}
+  ✓ Database Inspector - Enabled
+{{- else }}
+  ✗ Database Inspector - Disabled
+{{- end }}
+
+=============================================================================
+RABBITMQ MANAGEMENT
+=============================================================================
+{{- if .Values.rabbitmq.enabled }}
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ .Release.Name }}-rabbitmq 15672:15672
+  Then open: http://localhost:15672
+  Username: {{ .Values.rabbitmq.auth.username }}
+{{- end }}
+
+=============================================================================
+IMPORTANT NOTES
+=============================================================================
+
+1. Set the Discovery Agent token:
+   helm upgrade {{ .Release.Name }} . --set secrets.discoveryAgentToken=YOUR_TOKEN
+
+2. For network scanning, ensure the network-scanner pod has appropriate
+   network access (hostNetwork is enabled by default).
+
+3. Review data before transmission at the Approval UI.
+
+For more information, visit:
+  https://github.com/CryptoYogiLLC/aiforce-discovery-agent

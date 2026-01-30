@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/discovered-server.json",
+  "title": "Server Discovered Event",
+  "description": "Event emitted when a server/host is discovered on the network",
+  "allOf": [
+    { "$ref": "cloudevent-base.json" }
+  ],
+  "properties": {
+    "type": {
+      "const": "discovery.server.discovered"
+    },
+    "source": {
+      "const": "/collectors/network-scanner"
+    },
+    "data": {
+      "type": "object",
+      "required": ["ip_address", "scan_timestamp"],
+      "properties": {
+        "ip_address": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "IP address of the discovered server"
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Resolved hostname (if available)"
+        },
+        "mac_address": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
+          "description": "MAC address (if on same subnet)"
+        },
+        "open_ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["port", "protocol"],
+            "properties": {
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "protocol": {
+                "type": "string",
+                "enum": ["tcp", "udp"]
+              },
+              "service": {
+                "type": "string",
+                "description": "Detected service name"
+              },
+              "version": {
+                "type": "string",
+                "description": "Detected service version"
+              }
+            }
+          }
+        },
+        "os_fingerprint": {
+          "type": "object",
+          "properties": {
+            "family": {
+              "type": "string",
+              "enum": ["linux", "windows", "macos", "unix", "unknown"]
+            },
+            "version": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "scan_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scan_duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,240 @@
+# Default values for discovery-agent
+# This is a YAML-formatted file.
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets: []
+
+# =============================================================================
+# COLLECTORS
+# =============================================================================
+networkScanner:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/network-scanner
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  # Host network required for network scanning
+  hostNetwork: true
+  config:
+    scanSubnets:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    excludeSubnets: []
+    ports:
+      - 22
+      - 80
+      - 443
+      - 3306
+      - 5432
+
+codeAnalyzer:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/code-analyzer
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+dbInspector:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/db-inspector
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# =============================================================================
+# PROCESSING SERVICES
+# =============================================================================
+enrichment:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/enrichment
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+piiRedactor:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/pii-redactor
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  config:
+    redactEmails: true
+    redactIps: true
+    redactHostnames: false
+    redactUsernames: true
+
+# =============================================================================
+# GATEWAY SERVICES
+# =============================================================================
+approvalApi:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/approval-api
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3001
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+approvalUi:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/approval-ui
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: discovery.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+transmitter:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cryptoyogillc/aiforce-discovery-agent/transmitter
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  config:
+    aiforceApiUrl: https://api.aiforce-assess.com
+    batchSize: 100
+
+# =============================================================================
+# INFRASTRUCTURE DEPENDENCIES
+# =============================================================================
+rabbitmq:
+  enabled: true
+  auth:
+    username: discovery
+    password: ""  # Set via --set or secrets
+  persistence:
+    enabled: true
+    size: 8Gi
+
+postgresql:
+  enabled: true
+  auth:
+    username: discovery
+    password: ""  # Set via --set or secrets
+    database: discovery_agent
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+
+# =============================================================================
+# SECRETS
+# =============================================================================
+secrets:
+  # Discovery Agent token for AIForce Assess
+  discoveryAgentToken: ""
+
+# =============================================================================
+# COMMON SETTINGS
+# =============================================================================
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
