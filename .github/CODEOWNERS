@@ -1,0 +1,28 @@
+# CODEOWNERS - Automatically request reviews from these owners
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @CryptoYogiLLC
+
+# Collectors
+/collectors/network-scanner/ @CryptoYogiLLC
+/collectors/code-analyzer/ @CryptoYogiLLC
+/collectors/db-inspector/ @CryptoYogiLLC
+
+# Platform services
+/platform/ @CryptoYogiLLC
+
+# Gateway
+/gateway/ @CryptoYogiLLC
+
+# Infrastructure
+/deploy/ @CryptoYogiLLC
+/docker-compose.yml @CryptoYogiLLC
+/.github/workflows/ @CryptoYogiLLC
+
+# Documentation
+/docs/ @CryptoYogiLLC
+*.md @CryptoYogiLLC
+
+# Event schemas
+/shared/events/ @CryptoYogiLLC
