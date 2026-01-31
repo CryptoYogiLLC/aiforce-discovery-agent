@@ -13,8 +13,8 @@
     },
     "type": {
       "type": "string",
-      "pattern": "^discovery\\.[a-z]+\\.[a-z]+$",
-      "description": "Event type in format: discovery.<category>.<action>"
+      "pattern": "^discovery\\.[a-z]+\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$",
+      "description": "Event type in format: discovery.<entity>.<past-tense-verb>. Entities: server, service, database, schema, repository, codebase, dependency, application, batch"
     },
     "source": {
       "type": "string",

@@ -107,11 +107,11 @@ This document defines the technical architecture for the AIForce Discovery Agent
 - Rate-limited subnet crawling
 
 **Events Published:**
-| Event Type | Payload |
-|------------|---------|
-| `discovered.server` | Server metadata, IPs, open ports |
-| `discovered.service` | Service type, version, port |
-| `discovered.network_flow` | Source, destination, protocol |
+| CloudEvents Type | Routing Key | Payload |
+|------------------|-------------|---------|
+| `discovery.server.discovered` | `discovered.server` | Server metadata, IPs, open ports |
+| `discovery.service.discovered` | `discovered.service` | Service type, version, port |
+| `discovery.networkflow.discovered` | `discovered.networkflow` | Source, destination, protocol |
 
 **Configuration:**
 ```yaml
@@ -148,11 +148,11 @@ network_scanner:
 - Technical debt signal detection
 
 **Events Published:**
-| Event Type | Payload |
-|------------|---------|
-| `discovered.repository` | Repo URL, languages, size |
-| `discovered.codebase` | LOC, complexity, frameworks |
-| `discovered.dependency` | Package name, version, vulnerabilities |
+| CloudEvents Type | Routing Key | Payload |
+|------------------|-------------|---------|
+| `discovery.repository.discovered` | `discovered.repository` | Repo URL, languages, size |
+| `discovery.codebase.discovered` | `discovered.codebase` | LOC, complexity, frameworks |
+| `discovery.dependency.discovered` | `discovered.dependency` | Package name, version, vulnerabilities |
 
 **Configuration:**
 ```yaml
@@ -189,11 +189,11 @@ code_analyzer:
 - Data volume estimation
 
 **Events Published:**
-| Event Type | Payload |
-|------------|---------|
-| `discovered.database` | DB type, version, size |
-| `discovered.schema` | Tables, columns, types |
-| `discovered.relationship` | FK relationships, cardinality |
+| CloudEvents Type | Routing Key | Payload |
+|------------------|-------------|---------|
+| `discovery.database.discovered` | `discovered.database` | DB type, version, size |
+| `discovery.schema.discovered` | `discovered.schema` | Tables, columns, types |
+| `discovery.relationship.discovered` | `discovered.relationship` | FK relationships, cardinality |
 
 **Configuration:**
 ```yaml
@@ -406,7 +406,7 @@ All events follow CloudEvents specification with custom data payload.
   "required": ["specversion", "type", "source", "id", "time", "data"],
   "properties": {
     "specversion": { "const": "1.0" },
-    "type": { "type": "string", "pattern": "^[a-z]+\\.[a-z]+\\.[a-z]+$" },
+    "type": { "type": "string", "pattern": "^discovery\\.[a-z]+\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$" },
     "source": { "type": "string", "format": "uri-reference" },
     "id": { "type": "string", "format": "uuid" },
     "time": { "type": "string", "format": "date-time" },
