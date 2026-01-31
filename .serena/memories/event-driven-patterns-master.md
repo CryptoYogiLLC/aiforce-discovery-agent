@@ -22,6 +22,16 @@
 
 All services communicate via CloudEvents through RabbitMQ.
 
+### Naming Convention (IMPORTANT)
+
+| Component | Convention | Example |
+|-----------|------------|---------|
+| CloudEvents `type` | 3 segments: `domain.noun.verb` | `discovery.server.discovered` |
+| RabbitMQ routing key | 2 segments: `verb.noun` | `discovered.server` |
+| Schema filename | kebab-case | `discovered-server.json` |
+
+**Why different?** The CloudEvents `type` follows the spec (descriptive, namespaced). The routing key is optimized for RabbitMQ topic matching (`discovered.*` matches all discoveries).
+
 ### Event Structure
 ```json
 {
@@ -120,6 +130,7 @@ channel.queue_bind(
 
 ## Event Flow in Discovery Agent
 
+### Full Microservices Path
 ```
 discovered.* → Enrichment → enriched.*
 enriched.*   → PII Redactor → redacted.*
@@ -127,6 +138,15 @@ redacted.*   → Scoring → scored.*
 scored.*     → Approval Gateway → approved.*
 approved.*   → Transmitter
 ```
+
+### MVP Simplified Path (Recommended for initial deployment)
+```
+discovered.* → [Unified Processor] → scored.*
+scored.*     → Approval Gateway → approved.*
+approved.*   → Transmitter
+```
+
+The unified processor combines enrichment + PII redaction + scoring into one service. See issue #50.
 
 ### RabbitMQ Routing
 
