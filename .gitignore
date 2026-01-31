@@ -45,3 +45,7 @@ htmlcov/
 *.key
 secrets/
 credentials/
+
+# Generated test environment
+docker-compose.generated.yml
+test-env-manifest.json
