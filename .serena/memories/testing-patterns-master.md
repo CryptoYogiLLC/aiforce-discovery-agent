@@ -3,7 +3,7 @@
 **Last Updated**: 2026-01-30
 **Version**: 1.0
 **Status**: Active
-**Source**: Lessons from AIForce Assess (migrate-ui-orchestrator)
+**Source**: Lessons from prior AIForce project development
 
 ---
 
