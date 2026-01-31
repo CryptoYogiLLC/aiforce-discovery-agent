@@ -19,11 +19,11 @@ Analyze source code repositories for dependencies, complexity, and technical deb
 
 ## Events Published
 
-| Event Type | Description |
-|------------|-------------|
-| `discovered.repository` | Repository analyzed |
-| `discovered.codebase` | Codebase metrics calculated |
-| `discovered.dependency` | Dependency identified |
+| CloudEvents Type | Routing Key | Description |
+|------------------|-------------|-------------|
+| `discovery.repository.discovered` | `discovered.repository` | Repository analyzed |
+| `discovery.codebase.discovered` | `discovered.codebase` | Codebase metrics calculated |
+| `discovery.dependency.discovered` | `discovered.dependency` | Dependency identified |
 
 ## Development
 

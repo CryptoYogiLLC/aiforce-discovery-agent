@@ -18,11 +18,11 @@ Discover servers, services, and network topology within configured subnets.
 
 ## Events Published
 
-| Event Type | Description |
-|------------|-------------|
-| `discovered.server` | New server discovered |
-| `discovered.service` | Service identified on a port |
-| `discovered.network_flow` | Network connection detected |
+| CloudEvents Type | Routing Key | Description |
+|------------------|-------------|-------------|
+| `discovery.server.discovered` | `discovered.server` | New server discovered |
+| `discovery.service.discovered` | `discovered.service` | Service identified on a port |
+| `discovery.networkflow.discovered` | `discovered.networkflow` | Network connection detected |
 
 ## Configuration
 

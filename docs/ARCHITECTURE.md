@@ -416,12 +416,12 @@ All events follow CloudEvents specification with custom data payload.
 }
 ```
 
-### Example: discovered.server
+### Example: Server Discovery Payload Schema
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aiforce.dev/schemas/discovered.server.json",
+  "$id": "https://aiforce.dev/schemas/discovered-server.json",
   "type": "object",
   "required": ["server_id", "hostname", "discovered_at"],
   "properties": {

@@ -18,11 +18,11 @@ Inspect database schemas, identify relationships, and detect sensitive data.
 
 ## Events Published
 
-| Event Type | Description |
-|------------|-------------|
-| `discovered.database` | Database instance found |
-| `discovered.schema` | Schema extracted |
-| `discovered.table` | Table metadata captured |
+| CloudEvents Type | Routing Key | Description |
+|------------------|-------------|-------------|
+| `discovery.database.discovered` | `discovered.database` | Database instance found |
+| `discovery.schema.discovered` | `discovered.schema` | Schema extracted |
+| `discovery.table.discovered` | `discovered.table` | Table metadata captured |
 
 ## Development
 

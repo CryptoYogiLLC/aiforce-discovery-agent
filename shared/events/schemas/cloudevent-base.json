@@ -14,7 +14,7 @@
     "type": {
       "type": "string",
       "pattern": "^discovery\\.[a-z]+\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$",
-      "description": "Event type in format: discovery.<entity>.<past-tense-verb>. Entities: server, service, database, schema, repository, codebase, dependency, application, batch"
+      "description": "Event type in format: discovery.<entity>.<verb>. Entity must be lowercase letters only (no digits/underscores - use 'networkflow' not 'network_flow'). Verb must be: discovered|enriched|redacted|scored|approved|rejected|failed"
     },
     "source": {
       "type": "string",
