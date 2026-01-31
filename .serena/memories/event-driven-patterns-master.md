@@ -26,11 +26,18 @@ All services communicate via CloudEvents through RabbitMQ.
 
 | Component | Convention | Example |
 |-----------|------------|---------|
-| CloudEvents `type` | 3 segments: `domain.noun.verb` | `discovery.server.discovered` |
+| CloudEvents `type` | 3 segments: `discovery.<entity>.<verb>` | `discovery.server.discovered` |
 | RabbitMQ routing key | 2 segments: `verb.noun` | `discovered.server` |
 | Schema filename | kebab-case | `discovered-server.json` |
 
 **Why different?** The CloudEvents `type` follows the spec (descriptive, namespaced). The routing key is optimized for RabbitMQ topic matching (`discovered.*` matches all discoveries).
+
+**Entity naming rules:**
+- Must start with lowercase letter
+- May contain lowercase letters and digits
+- NO underscores (use `networkflow` not `network_flow`, use `ec2instance` not `ec2_instance`)
+
+**Allowed verbs:** `discovered`, `enriched`, `redacted`, `scored`, `approved`, `rejected`, `failed`
 
 ### Event Structure
 ```json

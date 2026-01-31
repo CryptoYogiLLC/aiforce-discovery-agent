@@ -13,8 +13,8 @@
     },
     "type": {
       "type": "string",
-      "pattern": "^discovery\\.[a-z]+\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$",
-      "description": "Event type in format: discovery.<entity>.<verb>. Entity must be lowercase letters only (no digits/underscores - use 'networkflow' not 'network_flow'). Verb must be: discovered|enriched|redacted|scored|approved|rejected|failed"
+      "pattern": "^discovery\\.[a-z][a-z0-9]*\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$",
+      "description": "Event type in format: discovery.<entity>.<verb>. Entity must start with lowercase letter, may contain lowercase letters and digits (no underscores - use 'ec2instance' not 'ec2_instance'). Verb must be: discovered|enriched|redacted|scored|approved|rejected|failed"
     },
     "source": {
       "type": "string",

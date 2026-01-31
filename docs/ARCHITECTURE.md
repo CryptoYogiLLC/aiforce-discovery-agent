@@ -406,7 +406,7 @@ All events follow CloudEvents specification with custom data payload.
   "required": ["specversion", "type", "source", "id", "time", "data"],
   "properties": {
     "specversion": { "const": "1.0" },
-    "type": { "type": "string", "pattern": "^discovery\\.[a-z]+\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$" },
+    "type": { "type": "string", "pattern": "^discovery\\.[a-z][a-z0-9]*\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$" },
     "source": { "type": "string", "format": "uri-reference" },
     "id": { "type": "string", "format": "uuid" },
     "time": { "type": "string", "format": "date-time" },
