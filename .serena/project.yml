@@ -1,0 +1,36 @@
+# language of the project (csharp, python, rust, java, typescript, go, cpp, or ruby)
+#  * For C, use cpp
+#  * For JavaScript, use typescript
+# Note: This is a polyglot project (Go, Python, TypeScript). Primary language set to Python
+# as the majority of services use it.
+language: python
+
+# whether to use the project's gitignore file to ignore files
+ignore_all_files_in_gitignore: true
+
+# list of additional paths to ignore
+ignored_paths:
+  - "test-fixtures/**"
+  - "**/__pycache__/**"
+  - "**/node_modules/**"
+  - "**/.venv/**"
+
+# whether the project is in read-only mode
+read_only: false
+
+# list of tool names to exclude
+excluded_tools: []
+
+# initial prompt for the project
+initial_prompt: |
+  This is the AIForce Discovery Agent project - a microservices-based system for
+  application discovery in client environments. Key things to know:
+
+  1. POLYGLOT: Go (network-scanner), Python (analyzers, processing), TypeScript (UI)
+  2. EVENT-DRIVEN: Services communicate via CloudEvents through RabbitMQ
+  3. CRITICAL LESSONS: Read .serena/memories/ for patterns from the parent project
+  4. NEVER create band-aid solutions - always fix root causes
+
+  Before making changes, check relevant memories for patterns and anti-patterns.
+
+project_name: "aiforce-discovery-agent"
