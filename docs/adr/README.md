@@ -11,6 +11,7 @@ An ADR is a document that captures an important architectural decision made alon
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [001](001-development-environment-strategy.md) | Development Environment Strategy | Accepted | Jan 2026 |
+| [002](002-integration-with-aiforce-assess.md) | Integration with AIForce Assess | Proposed | Jan 2026 |
 
 ## Creating a New ADR
 
