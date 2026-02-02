@@ -2,6 +2,7 @@
 package publisher
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -67,7 +68,7 @@ func New(url string, logger *zap.SugaredLogger) (*Publisher, error) {
 
 	channel, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
@@ -82,7 +83,7 @@ func New(url string, logger *zap.SugaredLogger) (*Publisher, error) {
 // Close closes the RabbitMQ connection.
 func (p *Publisher) Close() error {
 	if p.channel != nil {
-		p.channel.Close()
+		_ = p.channel.Close()
 	}
 	if p.conn != nil {
 		return p.conn.Close()
@@ -153,7 +154,11 @@ func (p *Publisher) publish(event CloudEvent, routingKey string) error {
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
-	err = p.channel.Publish(
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = p.channel.PublishWithContext(
+		ctx,
 		p.exchange,
 		routingKey,
 		false, // mandatory

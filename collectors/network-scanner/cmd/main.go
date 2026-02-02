@@ -24,7 +24,7 @@ func main() {
 		fmt.Printf("failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	sugar := logger.Sugar()
 	sugar.Info("Starting network scanner service")
@@ -46,7 +46,7 @@ func main() {
 	if err != nil {
 		sugar.Fatalf("Failed to initialize publisher: %v", err)
 	}
-	defer pub.Close()
+	defer func() { _ = pub.Close() }()
 
 	// Initialize scanner
 	scan := scanner.New(cfg.Scanner, pub, sugar)

@@ -191,19 +191,21 @@ func (s *Scanner) scanPort(ip string, port int, protocol string) ScanResult {
 		Timestamp: time.Now(),
 	}
 
-	address := fmt.Sprintf("%s:%d", ip, port)
+	address := net.JoinHostPort(ip, fmt.Sprintf("%d", port))
 	timeout := time.Duration(s.config.Timeout) * time.Millisecond
 
 	conn, err := net.DialTimeout(protocol, address, timeout)
 	if err != nil {
 		return result
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	result.Open = true
 
 	// Try to grab banner
-	conn.SetReadDeadline(time.Now().Add(timeout))
+	if err := conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
+		return result
+	}
 	buffer := make([]byte, 1024)
 	n, _ := conn.Read(buffer)
 	if n > 0 {
