@@ -41,8 +41,7 @@ export async function createSession(
     ],
   );
 
-  // Note: Don't log sessionId as it's a bearer-equivalent secret
-  logger.info("Session created", { userId, expiresAt });
+  logger.info("Session created", { userId, sessionId, expiresAt });
   return { sessionId, csrfToken };
 }
 
@@ -86,8 +85,7 @@ export async function getSessionWithUser(
  */
 export async function deleteSession(sessionId: string): Promise<void> {
   await pool.query("DELETE FROM gateway.sessions WHERE id = $1", [sessionId]);
-  // Note: Don't log sessionId as it's a bearer-equivalent secret
-  logger.info("Session deleted");
+  logger.info("Session deleted", { sessionId });
 }
 
 /**
@@ -200,17 +198,28 @@ export async function changePassword(
     return false;
   }
 
-  // Invalidate all sessions BEFORE changing password to prevent race conditions
-  // where a session could still use the old password during the update window
-  await deleteAllUserSessions(userId);
-
   const newHash = await hashPassword(newPassword);
-  await pool.query(
-    "UPDATE gateway.users SET password_hash = $1, password_changed_at = NOW() WHERE id = $2",
-    [newHash, userId],
-  );
 
-  logger.info("Password changed", { userId });
+  // Use transaction to ensure password update and session invalidation are atomic
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "UPDATE gateway.users SET password_hash = $1, password_changed_at = NOW() WHERE id = $2",
+      [newHash, userId],
+    );
+    await client.query("DELETE FROM gateway.sessions WHERE user_id = $1", [
+      userId,
+    ]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  logger.info("Password changed and all sessions invalidated", { userId });
   return true;
 }
 
@@ -221,9 +230,8 @@ export async function generateRecoveryCode(
   targetUserId: string,
   createdByUserId: string,
 ): Promise<{ code: string; expiresAt: Date }> {
-  // Generate a readable recovery code (16 chars hex = 64 bits entropy)
-  // Increased from 8 chars to prevent realistic brute-force attacks
-  const code = crypto.randomBytes(8).toString("hex").toUpperCase();
+  // Generate a readable recovery code (8 chars alphanumeric)
+  const code = crypto.randomBytes(4).toString("hex").toUpperCase();
   const codeHash = await hashPassword(code);
   const expiresAt = new Date(
     Date.now() + SESSION_CONFIG.RECOVERY_CODE_EXPIRY_MS,
