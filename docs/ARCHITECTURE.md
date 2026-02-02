@@ -622,15 +622,15 @@ See [SECURITY.md](../SECURITY.md) for full details.
 
 ## Appendix: Technology Stack
 
-| Layer                | Technology                 | Version            |
-| -------------------- | -------------------------- | ------------------ |
-| **Languages**        | Go, Python, TypeScript     | 1.22+, 3.11+, 5.0+ |
-| **Go Framework**     | Gin                        | 1.9+               |
-| **Python Framework** | FastAPI                    | 0.109+             |
-| **Node Framework**   | Express                    | 4.18+              |
-| **Frontend**         | React + Vite               | 18+, 5+            |
-| **Message Broker**   | RabbitMQ                   | 3.12+              |
-| **Database**         | PostgreSQL, SQLite         | 16+, 3.40+         |
-| **Cache**            | Redis                      | 7+                 |
-| **Containers**       | Docker                     | 24+                |
-| **Orchestration**    | Docker Compose, Kubernetes | 2.20+, 1.28+       |
+| Layer                | Technology                    | Version            |
+| -------------------- | ----------------------------- | ------------------ |
+| **Languages**        | Go, Python, TypeScript        | 1.22+, 3.11+, 5.0+ |
+| **Go Framework**     | Gin                           | 1.9+               |
+| **Python Framework** | FastAPI                       | 0.109+             |
+| **Node Framework**   | Express                       | 4.18+              |
+| **Frontend**         | React + Vite                  | 18+, 5+            |
+| **Message Broker**   | RabbitMQ                      | 3.12+              |
+| **Database**         | PostgreSQL (pgvector), SQLite | 17+, 3.40+         |
+| **Cache**            | Redis                         | 7+                 |
+| **Containers**       | Docker                        | 24+                |
+| **Orchestration**    | Docker Compose, Kubernetes    | 2.20+, 1.28+       |

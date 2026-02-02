@@ -40,7 +40,9 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16
+    # Using pgvector:pg17 for consistency with AIForce-Assess parent project
+    # Enables future vector-based features (embedding search, similarity matching)
+    image: pgvector/pgvector:pg17
     container_name: discovery-postgres
     ports:
       - "${POSTGRES_PORT:-5434}:5432"
