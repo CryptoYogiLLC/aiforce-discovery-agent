@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
 import profilesRoutes from "./routes/profiles";
 import dryrunRoutes from "./routes/dryrun";
+import dashboardRoutes from "./routes/dashboard";
 import { runMigrations } from "./db/migrate";
 
 const app = express();
@@ -47,6 +48,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/profiles", profilesRoutes);
 app.use("/api/dryrun", dryrunRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/discoveries", discoveryRoutes);
 app.use("/api/audit", auditRoutes);
 

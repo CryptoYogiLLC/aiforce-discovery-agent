@@ -246,10 +246,17 @@ export async function stopSessionHandler(
       message: "Dry-run session stopped and test environment cleaned up.",
     });
   } catch (err) {
-    logger.error("Failed to stop dry-run session", {
-      error: (err as Error).message,
-    });
-    res.status(500).json({ error: (err as Error).message });
+    const errorMessage = (err as Error).message;
+
+    // Return appropriate HTTP status based on error type
+    if (errorMessage === "Session not found") {
+      res.status(404).json({ error: errorMessage });
+    } else if (errorMessage.startsWith("Cannot stop session")) {
+      res.status(400).json({ error: errorMessage });
+    } else {
+      logger.error("Failed to stop dry-run session", { error: errorMessage });
+      res.status(500).json({ error: "Failed to stop dry-run session" });
+    }
   }
 }
 
@@ -533,6 +540,13 @@ export async function registerContainerHandler(
   }
 
   try {
+    // Verify session exists before registering container
+    const session = await getSessionById(req.body.session_id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
     const container = await registerContainer(
       req.body.session_id,
       req.body.container_id,

@@ -96,13 +96,14 @@ ON CONFLICT (role, permission) DO NOTHING;
 ALTER TABLE gateway.audit_log
 ADD COLUMN IF NOT EXISTS event_category VARCHAR(50) DEFAULT 'discovery';
 
--- Create default admin user (password: changeme - MUST be changed on first login)
--- Password hash generated with argon2id
+-- Create default admin user with LOCKED password (invalid hash that won't authenticate)
+-- IMPORTANT: This user CANNOT log in until password is set via seed script or CLI
+-- The placeholder hash is intentionally invalid to prevent any default password authentication
 INSERT INTO gateway.users (username, email, password_hash, role)
 VALUES (
     'admin',
     'admin@localhost',
-    '$argon2id$v=19$m=65536,t=3,p=4$placeholder$placeholder',  -- Placeholder, will be set by seed script
+    '$argon2id$v=19$m=65536,t=3,p=4$INVALID$LOCKED_ACCOUNT_RUN_SEED_SCRIPT',
     'admin'
 ) ON CONFLICT (username) DO NOTHING;
 
