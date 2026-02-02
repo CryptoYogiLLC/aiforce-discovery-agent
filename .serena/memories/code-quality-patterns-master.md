@@ -209,6 +209,64 @@ Remember: The goal is to make the same mistake zero times, not twice.
 
 ---
 
+## Pattern: Regex Pattern Ordering in Detection Logic (Added 2026-02-02)
+
+**Problem**: When multiple regex patterns can match the same data, order matters. SSN format `123-45-6789` matches both SSN and phone patterns. IP addresses like `192.168.1.1` can match phone patterns.
+
+**Solution**: Order patterns from most specific to least specific, and track matched values:
+
+```python
+# Pattern dictionary with intentional ordering
+DATA_PATTERNS: dict[str, re.Pattern] = {
+    "email": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
+    "ssn": re.compile(r"^\d{3}-\d{2}-\d{4}$"),  # BEFORE phone
+    "ip_address": re.compile(r"^(?:(?:25[0-5]|...)\.){3}...$"),  # BEFORE phone
+    "phone": re.compile(r"^(?:\+\d{1,4}[-\s]?)?(?:\(\d{1,4}\)...)$"),  # After SSN/IP
+    "credit_card": re.compile(r"^(?:4[0-9]{12}(?:[0-9]{3})?|...)$"),
+}
+
+# Track matched values to prevent double-counting
+matched_values: set = set()
+for pii_type, pattern in DATA_PATTERNS.items():
+    unmatched = [v for v in values if v not in matched_values]
+    for v in unmatched:
+        if pattern.match(v.strip()):
+            matched_values.add(v)
+```
+
+**Why**: Python dicts maintain insertion order (3.7+), so you can rely on iteration order matching definition order.
+
+**Source**: Session 2026-02-02, Commit 45b98a7
+
+---
+
+## Pattern: Use Word Boundaries in Column Name Detection (Added 2026-02-02)
+
+**Problem**: Column "description" incorrectly flagged as IP-related because it contains "ip".
+
+**Solution**: Use word boundaries or exact match patterns:
+
+```python
+# Wrong - matches "description" because it contains "ip"
+"ip_address": [r"ip", r"ip_address", r"ipaddr"]
+
+# Correct - use word boundaries or exact match
+"ip_address": [
+    r"^ip$",          # Exact match only
+    r"ip_address",    # Full pattern
+    r"ipaddr",
+    r"client_ip",
+    r"remote_addr",
+    r"_ip$",          # Ends with _ip (like client_ip, user_ip)
+]
+```
+
+**Why**: Partial substring matches cause false positives. Column name detection should match intentional naming patterns, not accidental substrings.
+
+**Source**: Session 2026-02-02, Commit 45b98a7
+
+---
+
 ## Search Keywords
 
-quality, exceptions, error handling, type hints, shared library, todo, hardcode
+quality, exceptions, error handling, type hints, shared library, todo, hardcode, regex, pattern ordering, word boundary, pii detection

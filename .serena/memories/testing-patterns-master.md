@@ -156,6 +156,126 @@ npm run test -- --watch           # Watch mode
 
 ---
 
+## Pattern: Mock External Dependencies in conftest.py (Added 2026-02-02)
+
+**Problem**: Tests fail with import errors when external packages (aio_pika, asyncpg, aiomysql, prometheus_client) aren't installed in test environment.
+
+**Solution**: Mock modules in conftest.py BEFORE any source imports:
+
+```python
+# conftest.py - Must be at the TOP before any other imports
+import sys
+from unittest.mock import MagicMock, AsyncMock
+
+# Mock aio_pika before any test imports src.main
+mock_aio_pika = MagicMock()
+mock_aio_pika.connect_robust = AsyncMock()
+sys.modules["aio_pika"] = mock_aio_pika
+
+# Mock prometheus_client
+mock_prometheus = MagicMock()
+mock_prometheus.CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+mock_prometheus.generate_latest = MagicMock(return_value=b"# HELP...")
+sys.modules["prometheus_client"] = mock_prometheus
+
+# Mock tenacity (make retry a no-op decorator)
+mock_tenacity = MagicMock()
+mock_tenacity.retry = lambda **kwargs: lambda f: f
+mock_tenacity.stop_after_attempt = MagicMock()
+mock_tenacity.wait_exponential = MagicMock()
+sys.modules["tenacity"] = mock_tenacity
+
+# NOW import your test fixtures and source modules
+```
+
+**Why**: sys.modules mocks must be in place before Python attempts to import the source modules. conftest.py is loaded first by pytest, making it the ideal location.
+
+**Source**: Session 2026-02-02, Commits 9c5e41a, 45b98a7
+
+---
+
+## Pattern: Use @pytest_asyncio.fixture for Async Fixtures (Added 2026-02-02)
+
+**Problem**: Async fixtures return `async_generator` objects instead of actual values when using `@pytest.fixture`.
+
+**Solution**: Use `@pytest_asyncio.fixture` for any fixture that uses `async/await`:
+
+```python
+# Wrong - returns async_generator, not the client
+@pytest.fixture
+async def client():
+    async with AsyncClient(...) as ac:
+        yield ac
+
+# Correct - properly yields the client object
+import pytest_asyncio
+
+@pytest_asyncio.fixture
+async def client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+```
+
+**Why**: pytest's standard `@pytest.fixture` doesn't handle async context managers properly. The `pytest-asyncio` plugin provides the correct decorator.
+
+**Source**: Session 2026-02-02, Commit 45b98a7
+
+---
+
+## Pattern: FastAPI Response Patterns (Added 2026-02-02)
+
+**Problem**: Flask-style tuple returns `(content, status_code, headers)` cause errors in FastAPI.
+
+**Solution**: Use FastAPI's response classes:
+
+```python
+# Wrong - Flask style (doesn't work in FastAPI)
+@app.get("/metrics")
+async def metrics():
+    return generate_latest().decode("utf-8"), {"Content-Type": CONTENT_TYPE_LATEST}
+
+# Correct - FastAPI PlainTextResponse
+from fastapi.responses import PlainTextResponse
+
+@app.get("/metrics")
+async def metrics() -> PlainTextResponse:
+    return PlainTextResponse(
+        content=generate_latest().decode("utf-8"),
+        media_type=CONTENT_TYPE_LATEST,
+    )
+```
+
+**Source**: Session 2026-02-02, Commit 9c5e41a
+
+---
+
+## Pattern: Preserve HTTPException Status Codes (Added 2026-02-02)
+
+**Problem**: Catching all exceptions converts 400-level errors to 500 errors.
+
+**Solution**: Re-raise HTTPException before the generic exception handler:
+
+```python
+# Wrong - 400 errors become 500 errors
+try:
+    # ... validation that raises HTTPException(400)
+except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
+
+# Correct - preserve original status codes
+try:
+    # ... validation that raises HTTPException(400)
+except HTTPException:
+    raise  # Re-raise as-is (preserve 400 status)
+except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
+```
+
+**Source**: Session 2026-02-02, Commit 45b98a7
+
+---
+
 ## Search Keywords
 
-testing, pytest, go test, playwright, e2e, flaky, timeout, pre-commit
+testing, pytest, go test, playwright, e2e, flaky, timeout, pre-commit, mock, conftest, pytest_asyncio, async fixture, PlainTextResponse, HTTPException

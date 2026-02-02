@@ -213,6 +213,75 @@ password_hash = base64.b64encode(salt + hash_output).decode('ascii')
 
 ---
 
+## Pattern: Go Lint Fixes for golangci-lint (Added 2026-02-02)
+
+**Problem**: golangci-lint fails with errcheck, govet, and staticcheck errors.
+
+### errcheck: Deferred Close() error handling
+
+```go
+// Wrong - linter flags unhandled error
+defer conn.Close()
+defer file.Sync()
+
+// Correct - explicit ignore with anonymous function
+defer func() { _ = conn.Close() }()
+defer func() { _ = file.Sync() }()
+```
+
+### govet: IPv6-compatible address formatting
+
+```go
+// Wrong - not IPv6-safe
+address := fmt.Sprintf("%s:%d", host, port)
+
+// Correct - handles IPv6 addresses properly
+address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+```
+
+### staticcheck: Deprecated RabbitMQ methods
+
+```go
+// Wrong - deprecated channel.Publish
+err := channel.Publish(exchange, routingKey, false, false, msg)
+
+// Correct - use PublishWithContext
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+err := channel.PublishWithContext(ctx, exchange, routingKey, false, false, msg)
+```
+
+**Source**: Session 2026-02-02, Commit e570a36
+
+---
+
+## Pattern: Go Version and Security Updates (Added 2026-02-02)
+
+**Problem**: Dependabot alerts for golang.org/x/crypto, golang.org/x/net vulnerabilities.
+
+**Solution**: Upgrade Go version in Dockerfile and run go mod tidy:
+
+```dockerfile
+# Upgrade from Go 1.22 → 1.24
+FROM golang:1.24-alpine AS builder
+```
+
+```bash
+# Update dependencies
+go get -u golang.org/x/crypto golang.org/x/net golang.org/x/sys golang.org/x/text
+go mod tidy
+```
+
+**Key versions (as of 2026-02):**
+
+- Go 1.24 (required for latest crypto fixes)
+- golang.org/x/crypto v0.45.0+ (CVE-2025-47914, CVE-2025-58181)
+- golang.org/x/net v0.47.0+ (CVE-2025-22870, CVE-2025-22872)
+
+**Source**: Session 2026-02-02, Commits 85783aa, 0d077ee, 037049a
+
+---
+
 ## Search Keywords
 
-docker, docker-compose, postgres, volumes, requirements, override, container, rabbitmq, port, definitions
+docker, docker-compose, postgres, volumes, requirements, override, container, rabbitmq, port, definitions, golang, golangci-lint, errcheck, govet, staticcheck, dependabot, security
