@@ -1,6 +1,7 @@
 # ADR-001: Development Environment Strategy
 
 ## Status
+
 **Accepted** - January 2026
 
 ## Context
@@ -16,16 +17,19 @@ The AIForce Discovery Agent is a microservices-based system designed to run in c
 ### Options Considered
 
 #### Option A: Full Docker Development (Local)
+
 - Run all services in Docker containers locally
 - **Pros**: Consistent environment, close to production
 - **Cons**: Requires 10+ GB disk space, slow startup, resource-heavy
 
 #### Option B: GitHub Codespaces Only
+
 - All development in cloud-based Codespaces
 - **Pros**: No local disk usage, consistent environment
 - **Cons**: 60 hrs/month limit exhausted quickly with 6 developers, ~$200+/month overage costs, cannot test real network discovery
 
 #### Option C: Hybrid Approach (Selected)
+
 - Native development for day-to-day coding
 - Randomized Docker environment for integration testing
 - Codespaces for PR reviews and CI validation
@@ -33,6 +37,7 @@ The AIForce Discovery Agent is a microservices-based system designed to run in c
 - **Cons**: Requires local language tooling setup
 
 #### Option D: Railway/Vercel Development Environments
+
 - Use existing Railway deployment for development
 - **Pros**: Already configured for production
 - **Cons**: Cannot test network discovery, costs per environment
@@ -42,7 +47,9 @@ The AIForce Discovery Agent is a microservices-based system designed to run in c
 We adopt **Option C: Hybrid Approach** with three tiers:
 
 ### Tier 1: Native Local Development (Daily)
+
 Developers run services natively without Docker:
+
 ```bash
 # Go service
 cd collectors/network-scanner && go run cmd/main.go
@@ -55,19 +62,23 @@ cd gateway/approval-ui && npm run dev
 ```
 
 **Rationale**:
+
 - Zero Docker overhead
 - Fast iteration cycles
 - Minimal disk usage
 - IDE debugging works natively
 
 ### Tier 2: Randomized Target Environment (Integration Testing)
+
 A Python script generates unique Docker Compose configurations:
+
 ```bash
 make generate-env   # Creates docker-compose.generated.yml
 make target-up      # Starts randomized target network
 ```
 
 **Rationale**:
+
 - Prevents developers from coding for specific configurations
 - Simulates real client environments with varied:
   - Server types (nginx, Apache, Spring Boot, etc.)
@@ -77,13 +88,16 @@ make target-up      # Starts randomized target network
 - Can be torn down when not in use to save disk space
 
 ### Tier 3: GitHub Codespaces (PR Reviews & CI)
+
 Cloud environments used sparingly for:
+
 - PR review and testing
 - CI pipeline validation
 - Onboarding new developers
 - Demo/showcase purposes
 
 **Rationale**:
+
 - 60 hrs/month is sufficient for occasional use
 - Ensures consistent CI environment
 - No local setup required for reviewers
@@ -91,6 +105,7 @@ Cloud environments used sparingly for:
 ## Consequences
 
 ### Positive
+
 - **Minimal disk usage**: Only ~2GB when target environment is running
 - **No cloud costs**: Stays within Codespaces free tier
 - **Realistic testing**: Randomized environments catch hardcoded assumptions
@@ -98,11 +113,13 @@ Cloud environments used sparingly for:
 - **Flexible**: Developers can work offline
 
 ### Negative
+
 - **Initial setup required**: Each developer must install Go, Python, Node.js
 - **Environment drift risk**: Local environments may differ slightly
 - **Cannot test all scenarios**: Some edge cases require full Docker stack
 
 ### Mitigations
+
 - Pre-commit hooks ensure code quality regardless of local setup
 - CI runs full integration tests in consistent environment
 - `.devcontainer` provided for developers who prefer containerized development
@@ -110,11 +127,13 @@ Cloud environments used sparingly for:
 ## Implementation
 
 ### Files Added
+
 - `scripts/generate-test-env.py` - Randomized environment generator
 - `docker-compose.generated.yml` - Generated target environment (gitignored)
 - `.devcontainer/` - Codespaces/devcontainer configuration
 
 ### Makefile Commands
+
 ```bash
 make generate-env    # Generate new random target environment
 make target-up       # Start target environment
@@ -124,6 +143,7 @@ make target-list     # Show running target services
 ```
 
 ### Developer Workflow
+
 1. Clone repo, install Go/Python/Node.js
 2. Run `make dev-setup` for dependencies
 3. Code changes with native tooling
@@ -132,6 +152,7 @@ make target-list     # Show running target services
 6. Push PR, CI validates in Codespaces
 
 ## References
+
 - [GitHub Codespaces Pricing](https://docs.github.com/en/billing/managing-billing-for-github-codespaces)
 - [docs/TESTING_STRATEGY.md](../TESTING_STRATEGY.md)
 - [docs/DEVELOPMENT.md](../DEVELOPMENT.md)

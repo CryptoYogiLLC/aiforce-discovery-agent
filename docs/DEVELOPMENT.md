@@ -184,6 +184,7 @@ channel.basic_consume(
 ### RabbitMQ Management
 
 Access the RabbitMQ management UI at http://localhost:15672
+
 - Username: `discovery`
 - Password: (from .env or default `discovery`)
 
@@ -239,16 +240,19 @@ go run cmd/main.go -debug -target 192.168.1.0/24
 ## Code Style
 
 ### Go
+
 - Follow [Effective Go](https://golang.org/doc/effective_go)
 - Use `gofmt` and `golangci-lint`
 - Error wrapping with `fmt.Errorf("context: %w", err)`
 
 ### Python
+
 - Follow PEP 8 (enforced by Ruff)
 - Type hints required for public functions
 - Async preferred for I/O operations
 
 ### TypeScript
+
 - Follow Airbnb style guide
 - Strict TypeScript mode enabled
 - Functional components with hooks

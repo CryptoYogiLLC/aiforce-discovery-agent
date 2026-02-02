@@ -20,7 +20,11 @@ export default function Pagination({
   }
 
   // Show pages around current
-  for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+  for (
+    let i = Math.max(2, currentPage - 1);
+    i <= Math.min(totalPages - 1, currentPage + 1);
+    i++
+  ) {
     if (!pages.includes(i)) {
       pages.push(i);
     }
@@ -50,7 +54,9 @@ export default function Pagination({
         typeof page === "number" ? (
           <button
             key={index}
-            className={`btn ${page === currentPage ? "btn-primary" : "btn-outline"}`}
+            className={`btn ${
+              page === currentPage ? "btn-primary" : "btn-outline"
+            }`}
             onClick={() => onPageChange(page)}
           >
             {page}
@@ -59,7 +65,7 @@ export default function Pagination({
           <span key={index} style={{ padding: "0 0.5rem" }}>
             {page}
           </span>
-        )
+        ),
       )}
 
       <button

@@ -29,7 +29,9 @@ export default function DiscoveryDetail() {
         setDiscovery(disc);
         setAuditLog(audit);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load discovery");
+        setError(
+          err instanceof Error ? err.message : "Failed to load discovery",
+        );
       } finally {
         setLoading(false);
       }
@@ -88,22 +90,38 @@ export default function DiscoveryDetail() {
     <div>
       {error && <div className="error">{error}</div>}
 
-      <button className="btn btn-outline" onClick={() => navigate(-1)} style={{ marginBottom: "1rem" }}>
+      <button
+        className="btn btn-outline"
+        onClick={() => navigate(-1)}
+        style={{ marginBottom: "1rem" }}
+      >
         &larr; Back
       </button>
 
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: "1.5rem",
+          }}
+        >
           <div>
             <h2 style={{ marginBottom: "0.5rem" }}>{discovery.event_type}</h2>
-            <p style={{ color: "var(--text-secondary)" }}>
-              ID: {discovery.id}
-            </p>
+            <p style={{ color: "var(--text-secondary)" }}>ID: {discovery.id}</p>
           </div>
           <StatusBadge status={discovery.status} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "1rem",
+            marginBottom: "1.5rem",
+          }}
+        >
           <div>
             <strong>Source Service</strong>
             <p>{discovery.source_service}</p>
@@ -127,13 +145,17 @@ export default function DiscoveryDetail() {
           {discovery.rejection_reason && (
             <div style={{ gridColumn: "1 / -1" }}>
               <strong>Rejection Reason</strong>
-              <p style={{ color: "var(--danger-color)" }}>{discovery.rejection_reason}</p>
+              <p style={{ color: "var(--danger-color)" }}>
+                {discovery.rejection_reason}
+              </p>
             </div>
           )}
         </div>
 
         {discovery.status === "pending" && (
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+          <div
+            style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}
+          >
             <button
               className="btn btn-success"
               onClick={handleApprove}
@@ -177,7 +199,9 @@ export default function DiscoveryDetail() {
               {auditLog.map((entry) => (
                 <tr key={entry.id}>
                   <td>
-                    <span style={{ textTransform: "capitalize" }}>{entry.action}</span>
+                    <span style={{ textTransform: "capitalize" }}>
+                      {entry.action}
+                    </span>
                   </td>
                   <td>{entry.actor || "-"}</td>
                   <td>

@@ -12,7 +12,7 @@ REST API backend for the Discovery Approval Gateway. Stores discovery events fro
 ## Features
 
 - [x] PostgreSQL schema with discoveries and audit_log tables
-- [x] RabbitMQ consumer for scored.* events
+- [x] RabbitMQ consumer for scored.\* events
 - [x] REST API for discovery management
 - [x] Pagination, filtering, and sorting
 - [x] Single and batch approval/rejection
@@ -22,49 +22,49 @@ REST API backend for the Discovery Approval Gateway. Stores discovery events fro
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/ready` | Readiness check (includes DB and RabbitMQ status) |
-| GET | `/api/discoveries` | List discoveries (paginated) |
-| GET | `/api/discoveries/:id` | Get single discovery |
-| POST | `/api/discoveries/:id/approve` | Approve discovery |
-| POST | `/api/discoveries/:id/reject` | Reject discovery (requires reason) |
-| POST | `/api/discoveries/batch/approve` | Bulk approve multiple discoveries |
-| GET | `/api/audit` | List audit log entries |
-| GET | `/api/audit/discovery/:id` | Get audit log for specific discovery |
+| Method | Path                             | Description                                       |
+| ------ | -------------------------------- | ------------------------------------------------- |
+| GET    | `/health`                        | Health check                                      |
+| GET    | `/ready`                         | Readiness check (includes DB and RabbitMQ status) |
+| GET    | `/api/discoveries`               | List discoveries (paginated)                      |
+| GET    | `/api/discoveries/:id`           | Get single discovery                              |
+| POST   | `/api/discoveries/:id/approve`   | Approve discovery                                 |
+| POST   | `/api/discoveries/:id/reject`    | Reject discovery (requires reason)                |
+| POST   | `/api/discoveries/batch/approve` | Bulk approve multiple discoveries                 |
+| GET    | `/api/audit`                     | List audit log entries                            |
+| GET    | `/api/audit/discovery/:id`       | Get audit log for specific discovery              |
 
 ### Query Parameters for `/api/discoveries`
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | integer | 1 | Page number |
-| `pageSize` | integer | 20 | Items per page (max 100) |
-| `status` | string | | Filter by status (pending/approved/rejected) |
-| `sourceService` | string | | Filter by source service |
-| `sortBy` | string | created_at | Sort column |
-| `sortOrder` | string | desc | Sort direction (asc/desc) |
+| Parameter       | Type    | Default    | Description                                  |
+| --------------- | ------- | ---------- | -------------------------------------------- |
+| `page`          | integer | 1          | Page number                                  |
+| `pageSize`      | integer | 20         | Items per page (max 100)                     |
+| `status`        | string  |            | Filter by status (pending/approved/rejected) |
+| `sourceService` | string  |            | Filter by source service                     |
+| `sortBy`        | string  | created_at | Sort column                                  |
+| `sortOrder`     | string  | desc       | Sort direction (asc/desc)                    |
 
 ## Configuration
 
 Environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3001` | Server port |
-| `HOST` | `0.0.0.0` | Server bind host |
-| `POSTGRES_HOST` | `localhost` | PostgreSQL host |
-| `POSTGRES_PORT` | `5432` | PostgreSQL port |
-| `POSTGRES_USER` | `discovery` | PostgreSQL user |
-| `POSTGRES_PASSWORD` | `discovery` | PostgreSQL password |
-| `POSTGRES_DB` | `discovery` | PostgreSQL database |
-| `POSTGRES_SSL` | `false` | Enable SSL for PostgreSQL |
-| `POSTGRES_POOL_SIZE` | `10` | Connection pool size |
-| `RABBITMQ_URL` | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL |
-| `RABBITMQ_EXCHANGE` | `discovery.events` | RabbitMQ exchange |
-| `RABBITMQ_QUEUE` | `gateway.discoveries` | RabbitMQ queue name |
-| `LOG_LEVEL` | `info` | Logging level |
-| `CORS_ORIGIN` | `http://localhost:3000` | Allowed CORS origin |
+| Variable             | Default                                      | Description               |
+| -------------------- | -------------------------------------------- | ------------------------- |
+| `PORT`               | `3001`                                       | Server port               |
+| `HOST`               | `0.0.0.0`                                    | Server bind host          |
+| `POSTGRES_HOST`      | `localhost`                                  | PostgreSQL host           |
+| `POSTGRES_PORT`      | `5432`                                       | PostgreSQL port           |
+| `POSTGRES_USER`      | `discovery`                                  | PostgreSQL user           |
+| `POSTGRES_PASSWORD`  | `discovery`                                  | PostgreSQL password       |
+| `POSTGRES_DB`        | `discovery`                                  | PostgreSQL database       |
+| `POSTGRES_SSL`       | `false`                                      | Enable SSL for PostgreSQL |
+| `POSTGRES_POOL_SIZE` | `10`                                         | Connection pool size      |
+| `RABBITMQ_URL`       | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL              |
+| `RABBITMQ_EXCHANGE`  | `discovery.events`                           | RabbitMQ exchange         |
+| `RABBITMQ_QUEUE`     | `gateway.discoveries`                        | RabbitMQ queue name       |
+| `LOG_LEVEL`          | `info`                                       | Logging level             |
+| `CORS_ORIGIN`        | `http://localhost:3000`                      | Allowed CORS origin       |
 
 ## Database Schema
 

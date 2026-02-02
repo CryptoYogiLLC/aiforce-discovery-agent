@@ -26,7 +26,9 @@ export default function DiscoveryList() {
       const result = await api.discoveries.list(params);
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load discoveries");
+      setError(
+        err instanceof Error ? err.message : "Failed to load discoveries",
+      );
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,9 @@ export default function DiscoveryList() {
 
   const toggleSelectAll = () => {
     if (!data) return;
-    const pendingIds = data.data.filter((d) => d.status === "pending").map((d) => d.id);
+    const pendingIds = data.data
+      .filter((d) => d.status === "pending")
+      .map((d) => d.id);
     if (selected.size === pendingIds.length) {
       setSelected(new Set());
     } else {
@@ -92,7 +96,14 @@ export default function DiscoveryList() {
       {error && <div className="error">{error}</div>}
 
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1rem",
+          }}
+        >
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <select
               className="select"
@@ -122,8 +133,10 @@ export default function DiscoveryList() {
                   onChange={toggleSelectAll}
                   checked={
                     data &&
-                    data.data.filter((d) => d.status === "pending").length > 0 &&
-                    selected.size === data.data.filter((d) => d.status === "pending").length
+                    data.data.filter((d) => d.status === "pending").length >
+                      0 &&
+                    selected.size ===
+                      data.data.filter((d) => d.status === "pending").length
                   }
                 />
               </th>
@@ -153,7 +166,10 @@ export default function DiscoveryList() {
                 </td>
                 <td>{formatDate(discovery.created_at)}</td>
                 <td>
-                  <Link to={`/discovery/${discovery.id}`} className="btn btn-outline">
+                  <Link
+                    to={`/discovery/${discovery.id}`}
+                    className="btn btn-outline"
+                  >
                     View
                   </Link>
                 </td>
@@ -161,7 +177,10 @@ export default function DiscoveryList() {
             ))}
             {data?.data.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "2rem" }}>
+                <td
+                  colSpan={6}
+                  style={{ textAlign: "center", padding: "2rem" }}
+                >
                   No discoveries found
                 </td>
               </tr>

@@ -6,18 +6,18 @@ This document captures critical learnings from developing the AIForce Assess pla
 
 ## Executive Summary: Top 10 Rules
 
-| # | Rule | Consequence of Breaking |
-|---|------|------------------------|
-| 1 | POST/PUT/DELETE use request body, never query params | 422 errors, recurring bugs |
-| 2 | Never nest database transactions | "Transaction already begun" errors |
-| 3 | snake_case everywhere (frontend AND backend) | Schema mismatch bugs, NaN% displays |
-| 4 | Docker-first development only | "Works on my machine" syndrome |
-| 5 | Multi-tenant scoping on ALL queries | Data leakage, security violations |
-| 6 | Never downgrade database versions on existing volumes | Data corruption, startup failures |
-| 7 | Check for docker-compose.override.yml | Hidden version conflicts |
-| 8 | Use explicit waits in E2E tests | Flaky tests, false failures |
-| 9 | Run pre-commit before every commit | CI failures, wasted time |
-| 10 | Fix root causes, never band-aid | Technical debt accumulation |
+| #   | Rule                                                  | Consequence of Breaking             |
+| --- | ----------------------------------------------------- | ----------------------------------- |
+| 1   | POST/PUT/DELETE use request body, never query params  | 422 errors, recurring bugs          |
+| 2   | Never nest database transactions                      | "Transaction already begun" errors  |
+| 3   | snake_case everywhere (frontend AND backend)          | Schema mismatch bugs, NaN% displays |
+| 4   | Docker-first development only                         | "Works on my machine" syndrome      |
+| 5   | Multi-tenant scoping on ALL queries                   | Data leakage, security violations   |
+| 6   | Never downgrade database versions on existing volumes | Data corruption, startup failures   |
+| 7   | Check for docker-compose.override.yml                 | Hidden version conflicts            |
+| 8   | Use explicit waits in E2E tests                       | Flaky tests, false failures         |
+| 9   | Run pre-commit before every commit                    | CI failures, wasted time            |
+| 10  | Fix root causes, never band-aid                       | Technical debt accumulation         |
 
 ---
 
@@ -27,15 +27,15 @@ This document captures critical learnings from developing the AIForce Assess pla
 
 ```typescript
 // ✅ CORRECT
-const response = await fetch('/api/endpoint', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ field: 'value' })
+const response = await fetch("/api/endpoint", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ field: "value" }),
 });
 
 // ❌ WRONG - Causes 422 errors with FastAPI/Pydantic
 const response = await fetch(`/api/endpoint?field=value`, {
-  method: 'POST'
+  method: "POST",
 });
 ```
 
@@ -187,10 +187,10 @@ requirements-docker.txt    # Docker/Railway deployment (may differ)
 ```typescript
 // ✅ CORRECT - Wait for specific condition
 await page.waitForSelector('[data-testid="results-table"]');
-await expect(page.locator('.status')).toHaveText('Complete');
+await expect(page.locator(".status")).toHaveText("Complete");
 
 // ❌ WRONG - Flaky, timing-dependent
-await page.waitForTimeout(3000);  // Arbitrary delay
+await page.waitForTimeout(3000); // Arbitrary delay
 ```
 
 ### ✅ DO: Test Against Docker
@@ -362,15 +362,19 @@ channel.queue_declare(
 ## Status: Accepted
 
 ## Context
+
 We need reliable event delivery between microservices.
 
 ## Decision
+
 Use RabbitMQ over Kafka because:
+
 - Simpler operations for small team
 - Lower resource requirements
 - Sufficient throughput for our scale
 
 ## Consequences
+
 - Positive: Easier to operate
 - Negative: May need to migrate if scale increases 10x
 ```
@@ -379,6 +383,7 @@ Use RabbitMQ over Kafka because:
 
 ```markdown
 # Every service README should include:
+
 1. Purpose (1-2 sentences)
 2. Quick start commands
 3. Environment variables required
@@ -425,14 +430,14 @@ print(f"📁 Backup saved to backup_{timestamp}.sql")
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern | Why It's Bad | What To Do Instead |
-|--------------|--------------|-------------------|
-| `window.location.reload()` | Loses React state, poor UX | Invalidate React Query cache |
-| `except: pass` | Swallows errors silently | Log and handle specifically |
-| `# TODO: fix later` | Never gets fixed | Create GitHub issue |
-| `git commit --no-verify` | Bypasses quality checks | Fix the pre-commit errors |
-| Copying code between services | Maintenance nightmare | Create shared library |
-| Hardcoded timeouts | Flaky in different environments | Use environment variables |
+| Anti-Pattern                  | Why It's Bad                    | What To Do Instead           |
+| ----------------------------- | ------------------------------- | ---------------------------- |
+| `window.location.reload()`    | Loses React state, poor UX      | Invalidate React Query cache |
+| `except: pass`                | Swallows errors silently        | Log and handle specifically  |
+| `# TODO: fix later`           | Never gets fixed                | Create GitHub issue          |
+| `git commit --no-verify`      | Bypasses quality checks         | Fix the pre-commit errors    |
+| Copying code between services | Maintenance nightmare           | Create shared library        |
+| Hardcoded timeouts            | Flaky in different environments | Use environment variables    |
 
 ---
 

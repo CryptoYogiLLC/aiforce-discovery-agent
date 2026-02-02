@@ -56,9 +56,7 @@ class EventConsumer:
             self._queues.append(queue)
             logger.info("queue_bound", queue=queue_name)
 
-    def set_handler(
-        self, handler: Callable[[dict[str, Any]], Any]
-    ) -> None:
+    def set_handler(self, handler: Callable[[dict[str, Any]], Any]) -> None:
         """Set the message handler function.
 
         Args:

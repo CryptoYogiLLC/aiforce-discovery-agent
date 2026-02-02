@@ -32,8 +32,9 @@ RUN apk add --no-cache ca-certificates tzdata curl
 # Copy binary from builder
 COPY --from=builder /network-scanner /app/network-scanner
 
-# Copy configuration (optional, can be mounted)
-COPY config.yaml* /app/ 2>/dev/null || true
+# Copy configuration if exists (optional, can be mounted)
+# hadolint ignore=DL3021
+COPY config.yaml* /app/
 
 # Create non-root user
 RUN adduser -D -u 1000 scanner && \

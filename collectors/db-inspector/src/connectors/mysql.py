@@ -60,7 +60,8 @@ class MySQLConnector(BaseConnector):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cursor:
                 # Get all tables with row estimates
-                await cursor.execute("""
+                await cursor.execute(
+                    """
                     SELECT
                         TABLE_SCHEMA,
                         TABLE_NAME,
@@ -69,7 +70,9 @@ class MySQLConnector(BaseConnector):
                     WHERE TABLE_TYPE = 'BASE TABLE'
                     AND TABLE_SCHEMA = %s
                     ORDER BY TABLE_NAME
-                """, (self.database,))
+                """,
+                    (self.database,),
+                )
                 table_rows = await cursor.fetchall()
 
                 for table_row in table_rows:
@@ -82,13 +85,15 @@ class MySQLConnector(BaseConnector):
                     # Get indexes for this table
                     indexes = await self._get_indexes(cursor, schema, name)
 
-                    tables.append({
-                        "name": name,
-                        "schema": schema,
-                        "columns": columns,
-                        "indexes": indexes,
-                        "row_count_estimate": table_row["TABLE_ROWS"] or 0,
-                    })
+                    tables.append(
+                        {
+                            "name": name,
+                            "schema": schema,
+                            "columns": columns,
+                            "indexes": indexes,
+                            "row_count_estimate": table_row["TABLE_ROWS"] or 0,
+                        }
+                    )
 
         return tables
 
@@ -96,7 +101,8 @@ class MySQLConnector(BaseConnector):
         self, cursor: aiomysql.Cursor, schema: str, table: str
     ) -> list[dict[str, Any]]:
         """Get columns for a specific table."""
-        await cursor.execute("""
+        await cursor.execute(
+            """
             SELECT
                 COLUMN_NAME,
                 DATA_TYPE,
@@ -106,7 +112,9 @@ class MySQLConnector(BaseConnector):
             FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
             ORDER BY ORDINAL_POSITION
-        """, (schema, table))
+        """,
+            (schema, table),
+        )
         rows = await cursor.fetchall()
 
         return [
@@ -124,7 +132,8 @@ class MySQLConnector(BaseConnector):
         self, cursor: aiomysql.Cursor, schema: str, table: str
     ) -> list[dict[str, Any]]:
         """Get indexes for a specific table."""
-        await cursor.execute("""
+        await cursor.execute(
+            """
             SELECT
                 INDEX_NAME,
                 INDEX_TYPE,
@@ -133,7 +142,9 @@ class MySQLConnector(BaseConnector):
             FROM information_schema.STATISTICS
             WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
             GROUP BY INDEX_NAME, INDEX_TYPE, NON_UNIQUE
-        """, (schema, table))
+        """,
+            (schema, table),
+        )
         rows = await cursor.fetchall()
 
         return [
@@ -154,7 +165,8 @@ class MySQLConnector(BaseConnector):
         relationships = []
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cursor:
-                await cursor.execute("""
+                await cursor.execute(
+                    """
                     SELECT
                         CONSTRAINT_NAME,
                         TABLE_SCHEMA AS source_schema,
@@ -166,17 +178,21 @@ class MySQLConnector(BaseConnector):
                     FROM information_schema.KEY_COLUMN_USAGE
                     WHERE REFERENCED_TABLE_NAME IS NOT NULL
                     AND TABLE_SCHEMA = %s
-                """, (self.database,))
+                """,
+                    (self.database,),
+                )
                 rows = await cursor.fetchall()
 
                 for row in rows:
-                    relationships.append({
-                        "name": row["CONSTRAINT_NAME"],
-                        "source_table": f"{row['source_schema']}.{row['source_table']}",
-                        "source_column": row["source_column"],
-                        "target_table": f"{row['target_schema']}.{row['target_table']}",
-                        "target_column": row["target_column"],
-                    })
+                    relationships.append(
+                        {
+                            "name": row["CONSTRAINT_NAME"],
+                            "source_table": f"{row['source_schema']}.{row['source_table']}",
+                            "source_column": row["source_column"],
+                            "target_table": f"{row['target_schema']}.{row['target_table']}",
+                            "target_column": row["target_column"],
+                        }
+                    )
 
         return relationships
 
@@ -195,25 +211,32 @@ class MySQLConnector(BaseConnector):
                 # Column name-based detection (always runs)
                 name_findings = self.pii_detector.detect_by_column_name(column["name"])
                 for pii_type, confidence in name_findings:
-                    findings.append({
-                        "table": f"{table['schema']}.{table['name']}",
-                        "column": column["name"],
-                        "pii_type": pii_type,
-                        "confidence": confidence,
-                        "detection_method": "column_name",
-                    })
+                    findings.append(
+                        {
+                            "table": f"{table['schema']}.{table['name']}",
+                            "column": column["name"],
+                            "pii_type": pii_type,
+                            "confidence": confidence,
+                            "detection_method": "column_name",
+                        }
+                    )
 
                 # Data sampling-based detection (optional)
                 if enabled and column["data_type"] in (
-                    "varchar", "text", "char", "tinytext", "mediumtext", "longtext"
+                    "varchar",
+                    "text",
+                    "char",
+                    "tinytext",
+                    "mediumtext",
+                    "longtext",
                 ):
                     async with self.pool.acquire() as conn:
                         async with conn.cursor() as cursor:
                             try:
                                 await cursor.execute(f"""
-                                    SELECT `{column['name']}`
-                                    FROM `{table['schema']}`.`{table['name']}`
-                                    WHERE `{column['name']}` IS NOT NULL
+                                    SELECT `{column["name"]}`
+                                    FROM `{table["schema"]}`.`{table["name"]}`
+                                    WHERE `{column["name"]}` IS NOT NULL
                                     LIMIT {sample_size}
                                 """)
                                 samples = await cursor.fetchall()
@@ -222,19 +245,22 @@ class MySQLConnector(BaseConnector):
                                 for pii_type, confidence in data_findings:
                                     # Avoid duplicates with column name detection
                                     existing = any(
-                                        f["table"] == f"{table['schema']}.{table['name']}"
+                                        f["table"]
+                                        == f"{table['schema']}.{table['name']}"
                                         and f["column"] == column["name"]
                                         and f["pii_type"] == pii_type
                                         for f in findings
                                     )
                                     if not existing:
-                                        findings.append({
-                                            "table": f"{table['schema']}.{table['name']}",
-                                            "column": column["name"],
-                                            "pii_type": pii_type,
-                                            "confidence": confidence,
-                                            "detection_method": "data_pattern",
-                                        })
+                                        findings.append(
+                                            {
+                                                "table": f"{table['schema']}.{table['name']}",
+                                                "column": column["name"],
+                                                "pii_type": pii_type,
+                                                "confidence": confidence,
+                                                "detection_method": "data_pattern",
+                                            }
+                                        )
                             except Exception as e:
                                 logger.warning(
                                     f"Failed to sample {table['schema']}.{table['name']}.{column['name']}: {e}"

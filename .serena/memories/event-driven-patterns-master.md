@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. Use CloudEvents standard for all events
 > 2. Event handlers MUST be idempotent
 > 3. Configure Dead Letter Queues for failed events
@@ -24,15 +25,16 @@ All services communicate via CloudEvents through RabbitMQ.
 
 ### Naming Convention (IMPORTANT)
 
-| Component | Convention | Example |
-|-----------|------------|---------|
-| CloudEvents `type` | 3 segments: `discovery.<entity>.<verb>` | `discovery.server.discovered` |
-| RabbitMQ routing key | 2 segments: `verb.noun` | `discovered.server` |
-| Schema filename | kebab-case | `discovered-server.json` |
+| Component            | Convention                              | Example                       |
+| -------------------- | --------------------------------------- | ----------------------------- |
+| CloudEvents `type`   | 3 segments: `discovery.<entity>.<verb>` | `discovery.server.discovered` |
+| RabbitMQ routing key | 2 segments: `verb.noun`                 | `discovered.server`           |
+| Schema filename      | kebab-case                              | `discovered-server.json`      |
 
 **Why different?** The CloudEvents `type` follows the spec (descriptive, namespaced). The routing key is optimized for RabbitMQ topic matching (`discovered.*` matches all discoveries).
 
 **Entity naming rules:**
+
 - Must start with lowercase letter
 - May contain lowercase letters and digits
 - NO underscores (use `networkflow` not `network_flow`, use `ec2instance` not `ec2_instance`)
@@ -40,6 +42,7 @@ All services communicate via CloudEvents through RabbitMQ.
 **Allowed verbs:** `discovered`, `enriched`, `redacted`, `scored`, `approved`, `rejected`, `failed`
 
 ### Event Structure
+
 ```json
 {
   "specversion": "1.0",
@@ -58,6 +61,7 @@ All services communicate via CloudEvents through RabbitMQ.
 ```
 
 ### Publishing (Python)
+
 ```python
 from cloudevents.http import CloudEvent
 import json
@@ -87,6 +91,7 @@ channel.basic_publish(
 Events may be delivered multiple times. Handle duplicates gracefully.
 
 ### Correct
+
 ```python
 async def handle_server_discovered(event: CloudEvent):
     server_id = event.data['server_id']
@@ -101,6 +106,7 @@ async def handle_server_discovered(event: CloudEvent):
 ```
 
 ### Wrong
+
 ```python
 async def handle_server_discovered(event: CloudEvent):
     # Creates duplicate on redelivery!
@@ -138,6 +144,7 @@ channel.queue_bind(
 ## Event Flow in Discovery Agent
 
 ### Full Microservices Path
+
 ```
 discovered.* → Enrichment → enriched.*
 enriched.*   → PII Redactor → redacted.*
@@ -147,6 +154,7 @@ approved.*   → Transmitter
 ```
 
 ### MVP Simplified Path (Recommended for initial deployment)
+
 ```
 discovered.* → [Unified Processor] → scored.*
 scored.*     → Approval Gateway → approved.*
@@ -157,13 +165,13 @@ The unified processor combines enrichment + PII redaction + scoring into one ser
 
 ### RabbitMQ Routing
 
-| Event Type | Routing Key | Consumer |
-|------------|-------------|----------|
-| `discovery.server.discovered` | `discovered.server` | Enrichment |
-| `discovery.database.discovered` | `discovered.database` | Enrichment |
+| Event Type                       | Routing Key            | Consumer     |
+| -------------------------------- | ---------------------- | ------------ |
+| `discovery.server.discovered`    | `discovered.server`    | Enrichment   |
+| `discovery.database.discovered`  | `discovered.database`  | Enrichment   |
 | `discovery.application.enriched` | `enriched.application` | PII Redactor |
-| `discovery.application.redacted` | `redacted.application` | Scoring |
-| `discovery.batch.approved` | `approved.batch` | Transmitter |
+| `discovery.application.redacted` | `redacted.application` | Scoring      |
+| `discovery.batch.approved`       | `approved.batch`       | Transmitter  |
 
 ---
 
@@ -172,6 +180,7 @@ The unified processor combines enrichment + PII redaction + scoring into one ser
 Keep event payloads focused. Reference large data by ID.
 
 ### Wrong
+
 ```json
 {
   "type": "discovery.codebase.analyzed",
@@ -184,6 +193,7 @@ Keep event payloads focused. Reference large data by ID.
 ```
 
 ### Correct
+
 ```json
 {
   "type": "discovery.codebase.analyzed",
@@ -191,7 +201,7 @@ Keep event payloads focused. Reference large data by ID.
     "repository_id": "abc123",
     "file_count": 1250,
     "dependency_count": 84,
-    "details_url": "/api/analyses/abc123"  // Reference for details
+    "details_url": "/api/analyses/abc123" // Reference for details
   }
 }
 ```
@@ -203,17 +213,19 @@ Keep event payloads focused. Reference large data by ID.
 Events describe what happened, not what should happen.
 
 ### Wrong (Command)
+
 ```json
 {
-  "type": "discovery.server.scan",  // Imperative - command
+  "type": "discovery.server.scan", // Imperative - command
   "data": { "target": "10.0.0.50" }
 }
 ```
 
 ### Correct (Fact)
+
 ```json
 {
-  "type": "discovery.server.discovered",  // Past tense - fact
+  "type": "discovery.server.discovered", // Past tense - fact
   "data": { "ip": "10.0.0.50", "hostname": "web-01" }
 }
 ```
@@ -222,12 +234,12 @@ Events describe what happened, not what should happen.
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why Bad | Do Instead |
-|--------------|---------|------------|
+| Anti-Pattern            | Why Bad             | Do Instead          |
+| ----------------------- | ------------------- | ------------------- |
 | Non-idempotent handlers | Duplicates on retry | Check before create |
-| No DLQ | Lost events | Configure DLQ |
-| Large payloads | Slow, memory issues | Reference by ID |
-| Command-style events | Coupling | Fact-style events |
+| No DLQ                  | Lost events         | Configure DLQ       |
+| Large payloads          | Slow, memory issues | Reference by ID     |
+| Command-style events    | Coupling            | Fact-style events   |
 
 ---
 
@@ -254,21 +266,38 @@ jsonschema.validate(event.data, schema)
 
 **Solution**: Use three-tier exchange topology in `definitions.json`:
 
-| Exchange | Type | Purpose |
-|----------|------|---------|
-| `discovery.events` | fanout | Collectors publish here (broadcasts to processing) |
-| `processing.events` | topic | Pipeline routing with `discovered.*`, `enriched.*` etc. |
-| `gateway.events` | direct | Final approved items to transmitter |
-| `discovery.dlx` | direct | Dead letter exchange |
+| Exchange            | Type   | Purpose                                                 |
+| ------------------- | ------ | ------------------------------------------------------- |
+| `discovery.events`  | fanout | Collectors publish here (broadcasts to processing)      |
+| `processing.events` | topic  | Pipeline routing with `discovered.*`, `enriched.*` etc. |
+| `gateway.events`    | direct | Final approved items to transmitter                     |
+| `discovery.dlx`     | direct | Dead letter exchange                                    |
 
 **Binding Strategy**:
+
 ```json
 {
   "bindings": [
-    {"source": "discovery.events", "destination": "processing.events", "destination_type": "exchange"},
-    {"source": "processing.events", "destination": "enrichment.server.queue", "routing_key": "discovered.server"},
-    {"source": "processing.events", "destination": "redactor.queue", "routing_key": "enriched.*"},
-    {"source": "gateway.events", "destination": "transmitter.queue", "routing_key": "approved.batch"}
+    {
+      "source": "discovery.events",
+      "destination": "processing.events",
+      "destination_type": "exchange"
+    },
+    {
+      "source": "processing.events",
+      "destination": "enrichment.server.queue",
+      "routing_key": "discovered.server"
+    },
+    {
+      "source": "processing.events",
+      "destination": "redactor.queue",
+      "routing_key": "enriched.*"
+    },
+    {
+      "source": "gateway.events",
+      "destination": "transmitter.queue",
+      "routing_key": "approved.batch"
+    }
   ]
 }
 ```
@@ -285,6 +314,7 @@ jsonschema.validate(event.data, schema)
 **Context**: MVP deployment where simplicity > scalability.
 
 **Solution**: Single processor service with internal modules:
+
 ```
 discovered.* → [Unified Processor] → scored.*
                     │
@@ -294,6 +324,7 @@ discovered.* → [Unified Processor] → scored.*
 ```
 
 **Benefits**:
+
 - Single deployment unit
 - Simpler debugging (all processing in one place)
 - Can split later when operational maturity increases

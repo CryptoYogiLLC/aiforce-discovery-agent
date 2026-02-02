@@ -8,10 +8,10 @@ An ADR is a document that captures an important architectural decision made alon
 
 ## ADR Index
 
-| ADR | Title | Status | Date |
-|-----|-------|--------|------|
+| ADR                                            | Title                            | Status   | Date     |
+| ---------------------------------------------- | -------------------------------- | -------- | -------- |
 | [001](001-development-environment-strategy.md) | Development Environment Strategy | Accepted | Jan 2026 |
-| [002](002-integration-with-aiforce-assess.md) | Integration with AIForce Assess | Proposed | Jan 2026 |
+| [002](002-integration-with-aiforce-assess.md)  | Integration with AIForce Assess  | Proposed | Jan 2026 |
 
 ## Creating a New ADR
 
@@ -26,24 +26,31 @@ An ADR is a document that captures an important architectural decision made alon
 # ADR-NNN: Title
 
 ## Status
+
 **Proposed** | **Accepted** | **Deprecated** | **Superseded by ADR-XXX**
 
 ## Context
+
 What is the issue that we're seeing that is motivating this decision or change?
 
 ## Decision
+
 What is the change that we're proposing and/or doing?
 
 ## Consequences
+
 What becomes easier or more difficult to do because of this change?
 
 ### Positive
+
 - ...
 
 ### Negative
+
 - ...
 
 ## References
+
 - Links to related documents, issues, or external resources
 ```
 

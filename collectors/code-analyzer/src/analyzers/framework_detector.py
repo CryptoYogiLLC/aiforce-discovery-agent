@@ -1,8 +1,6 @@
 """Framework and technology detection for code repositories."""
 
-import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Any
@@ -171,12 +169,12 @@ FRAMEWORK_PATTERNS: dict[str, dict[str, Any]] = {
     },
     "Rocket": {
         "files": [],
-        "patterns": [r'rocket\s*='],
+        "patterns": [r"rocket\s*="],
         "language": "Rust",
     },
     "Axum": {
         "files": [],
-        "patterns": [r'axum\s*='],
+        "patterns": [r"axum\s*="],
         "language": "Rust",
     },
     # C# frameworks
@@ -285,9 +283,7 @@ class FrameworkDetector:
             return (repo_path / filename.rstrip("/")).is_dir()
         return (repo_path / filename).exists()
 
-    def _check_patterns_in_repo(
-        self, repo_path: Path, patterns: list[str]
-    ) -> bool:
+    def _check_patterns_in_repo(self, repo_path: Path, patterns: list[str]) -> bool:
         """Check if patterns exist in common configuration files."""
         files_to_check = [
             "package.json",
@@ -318,7 +314,12 @@ class FrameworkDetector:
 
     def _check_requirements(self, repo_path: Path, patterns: list[str]) -> bool:
         """Check patterns in Python requirements files."""
-        req_files = ["requirements.txt", "requirements-dev.txt", "pyproject.toml", "Pipfile"]
+        req_files = [
+            "requirements.txt",
+            "requirements-dev.txt",
+            "pyproject.toml",
+            "Pipfile",
+        ]
 
         for req_file in req_files:
             filepath = repo_path / req_file

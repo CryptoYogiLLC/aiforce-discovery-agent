@@ -7,6 +7,7 @@
 Instead, please report them via email to cryptoyogi.llc@gmail.com.
 
 Include:
+
 - Type of issue
 - Full paths of affected source files
 - Location of affected code (tag/branch/commit or direct URL)

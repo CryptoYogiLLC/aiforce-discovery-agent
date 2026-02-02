@@ -1,6 +1,5 @@
 """Pytest configuration and fixtures for Code Analyzer tests."""
 
-import os
 import tempfile
 from pathlib import Path
 

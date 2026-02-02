@@ -1,6 +1,7 @@
 # ADR-002: Integration with AIForce Assess Application
 
 ## Status
+
 **Accepted** - January 2026
 
 ## Context
@@ -9,11 +10,11 @@ The AIForce Discovery Agent collects data from client environments (servers, dat
 
 AIForce Assess has two operational contexts with an existing transition process:
 
-| System | Scoping | Purpose |
-|--------|---------|---------|
-| **Discovery Engine** | `user_id` + `analysis_id` | Pre-sales workbook analysis |
-| **Modernization Workbench** | `client_account_id` + `engagement_id` | Post-SOW tenant-scoped work |
-| **Intake Process** | Existing workflow | Transitions data from Discovery → Workbench |
+| System                      | Scoping                               | Purpose                                     |
+| --------------------------- | ------------------------------------- | ------------------------------------------- |
+| **Discovery Engine**        | `user_id` + `analysis_id`             | Pre-sales workbook analysis                 |
+| **Modernization Workbench** | `client_account_id` + `engagement_id` | Post-SOW tenant-scoped work                 |
+| **Intake Process**          | Existing workflow                     | Transitions data from Discovery → Workbench |
 
 ## Decision
 
@@ -140,6 +141,7 @@ CREATE INDEX idx_discovery_agent_analysis ON discovery_agent_results(analysis_id
 ## Consequences
 
 ### Positive
+
 - Simple, single integration point
 - Leverages existing Intake process
 - No duplicate promotion logic
@@ -147,6 +149,7 @@ CREATE INDEX idx_discovery_agent_analysis ON discovery_agent_results(analysis_id
 - Faster implementation
 
 ### Negative
+
 - No direct Workbench integration (by design)
 - Requires existing Intake workflow to handle discovered data
 - Discovery Agent tokens only work in pre-sales context
@@ -154,11 +157,13 @@ CREATE INDEX idx_discovery_agent_analysis ON discovery_agent_results(analysis_id
 ### Future Considerations
 
 If ongoing discovery is needed post-SOW (monitoring for drift), a separate decision can be made to:
+
 - Create a Workbench-specific agent mode
 - Or use the Intake process to periodically refresh discovery data
 
 This is out of scope for MVP.
 
 ## References
+
 - AIForce Assess Intake Process
 - [ADR-001: Development Environment Strategy](001-development-environment-strategy.md)

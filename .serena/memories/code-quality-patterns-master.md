@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. Fix root causes, NEVER band-aid solutions
 > 2. Keep files under 400 lines
 > 3. Never hardcode credentials
@@ -23,6 +24,7 @@
 **NEVER** create band-aid solutions. Always dig deep.
 
 ### Wrong - Band-aid
+
 ```python
 def get_name(app):
     try:
@@ -32,6 +34,7 @@ def get_name(app):
 ```
 
 ### Correct - Root Cause Fix
+
 ```python
 def get_name(app):
     if app.name is None:
@@ -45,6 +48,7 @@ def get_name(app):
 ## Pattern: Keep Files Under 400 Lines
 
 When approaching limit:
+
 1. Extract helper functions to separate module
 2. Split class into multiple focused classes
 3. Move constants to dedicated config file
@@ -81,6 +85,7 @@ db_password = os.environ.get("DB_PASSWORD", "discovery")  # Dev default
 ## Pattern: Exception Handling
 
 ### Wrong
+
 ```python
 try:
     result = risky_operation()
@@ -89,6 +94,7 @@ except:
 ```
 
 ### Correct
+
 ```python
 try:
     result = risky_operation()
@@ -105,6 +111,7 @@ except ValidationError as e:
 ## Pattern: Shared Libraries Over Copy-Paste
 
 ### Wrong
+
 ```
 # Same code in multiple services
 collectors/network-scanner/internal/utils/config.go
@@ -113,6 +120,7 @@ gateway/transmitter/src/utils/config.py
 ```
 
 ### Correct
+
 ```
 # Shared utilities
 shared/
@@ -156,14 +164,14 @@ func ScanPort(host string, port int) (bool, error) {
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why Bad | Do Instead |
-|--------------|---------|------------|
-| `except: pass` | Swallows errors | Handle specifically |
-| `# TODO: fix later` | Never gets fixed | Create GitHub issue |
-| `git commit --no-verify` | Bypasses checks | Fix pre-commit errors |
-| Copy code between services | Maintenance nightmare | Shared library |
-| Hardcoded timeouts | Flaky in different envs | Environment variables |
-| `window.location.reload()` | Loses state, poor UX | Invalidate cache |
+| Anti-Pattern               | Why Bad                 | Do Instead            |
+| -------------------------- | ----------------------- | --------------------- |
+| `except: pass`             | Swallows errors         | Handle specifically   |
+| `# TODO: fix later`        | Never gets fixed        | Create GitHub issue   |
+| `git commit --no-verify`   | Bypasses checks         | Fix pre-commit errors |
+| Copy code between services | Maintenance nightmare   | Shared library        |
+| Hardcoded timeouts         | Flaky in different envs | Environment variables |
+| `window.location.reload()` | Loses state, poor UX    | Invalidate cache      |
 
 ---
 

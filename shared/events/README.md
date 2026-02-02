@@ -20,16 +20,17 @@ Every event follows the [CloudEvents 1.0 specification](https://cloudevents.io/)
 
 ## Available Schemas
 
-| Schema | Event Type | Source |
-|--------|------------|--------|
-| [cloudevent-base.json](schemas/cloudevent-base.json) | Base schema | All services |
-| [discovered-server.json](schemas/discovered-server.json) | `discovery.server.discovered` | Network Scanner |
-| [discovered-repository.json](schemas/discovered-repository.json) | `discovery.repository.discovered` | Code Analyzer |
-| [discovered-database.json](schemas/discovered-database.json) | `discovery.database.discovered` | DB Inspector |
+| Schema                                                           | Event Type                        | Source          |
+| ---------------------------------------------------------------- | --------------------------------- | --------------- |
+| [cloudevent-base.json](schemas/cloudevent-base.json)             | Base schema                       | All services    |
+| [discovered-server.json](schemas/discovered-server.json)         | `discovery.server.discovered`     | Network Scanner |
+| [discovered-repository.json](schemas/discovered-repository.json) | `discovery.repository.discovered` | Code Analyzer   |
+| [discovered-database.json](schemas/discovered-database.json)     | `discovery.database.discovered`   | DB Inspector    |
 
 ## Event Types
 
 ### Collector Events
+
 - `discovery.server.discovered` - Server/host discovered on network
 - `discovery.service.discovered` - Service identified on a port
 - `discovery.database.discovered` - Database instance found
@@ -37,11 +38,13 @@ Every event follows the [CloudEvents 1.0 specification](https://cloudevents.io/)
 - `discovery.dependency.discovered` - Dependency relationship found
 
 ### Processing Events
+
 - `discovery.application.enriched` - Application enriched with context
 - `discovery.application.redacted` - PII removed from application data
 - `discovery.application.scored` - Complexity/effort scores calculated
 
 ### Gateway Events
+
 - `discovery.batch.approved` - Batch of items approved for transmission
 - `discovery.batch.transmitted` - Batch successfully sent to AIForce Assess
 
@@ -77,8 +80,8 @@ if !result.Valid() {
 ### TypeScript
 
 ```typescript
-import Ajv from 'ajv';
-import schema from './schemas/discovered-server.json';
+import Ajv from "ajv";
+import schema from "./schemas/discovered-server.json";
 
 const ajv = new Ajv();
 const validate = ajv.compile(schema);
@@ -92,14 +95,14 @@ if (!validate(event)) {
 
 Events are routed via RabbitMQ topic exchange:
 
-| Event Type | Routing Key | Queue |
-|------------|-------------|-------|
-| `discovery.server.discovered` | `discovered.server` | `enrichment.server.queue` |
-| `discovery.repository.discovered` | `discovered.repository` | `enrichment.repo.queue` |
-| `discovery.database.discovered` | `discovered.database` | `enrichment.db.queue` |
-| `discovery.application.enriched` | `enriched.application` | `redactor.queue` |
-| `discovery.application.redacted` | `redacted.application` | `approval.queue` |
-| `discovery.batch.approved` | `approved.batch` | `transmitter.queue` |
+| Event Type                        | Routing Key             | Queue                     |
+| --------------------------------- | ----------------------- | ------------------------- |
+| `discovery.server.discovered`     | `discovered.server`     | `enrichment.server.queue` |
+| `discovery.repository.discovered` | `discovered.repository` | `enrichment.repo.queue`   |
+| `discovery.database.discovered`   | `discovered.database`   | `enrichment.db.queue`     |
+| `discovery.application.enriched`  | `enriched.application`  | `redactor.queue`          |
+| `discovery.application.redacted`  | `redacted.application`  | `approval.queue`          |
+| `discovery.batch.approved`        | `approved.batch`        | `transmitter.queue`       |
 
 ## Adding New Event Types
 

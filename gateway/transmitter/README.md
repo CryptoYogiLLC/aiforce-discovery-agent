@@ -12,7 +12,7 @@ Securely transmit approved discovery data to external systems (AIForce Assess). 
 ## Features
 
 - [x] FastAPI service scaffolding
-- [x] RabbitMQ consumer for approved.* events
+- [x] RabbitMQ consumer for approved.\* events
 - [x] Batch processing (configurable size and interval)
 - [x] Payload compression (gzip)
 - [x] HTTPS client with authentication
@@ -24,41 +24,41 @@ Securely transmit approved discovery data to external systems (AIForce Assess). 
 
 ## Events Consumed
 
-| Event Pattern | Action |
-|--------------|--------|
-| `approved.*` | Queue for transmission |
+| Event Pattern | Action                 |
+| ------------- | ---------------------- |
+| `approved.*`  | Queue for transmission |
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/ready` | Readiness check (DB, RabbitMQ, circuit breaker) |
-| GET | `/api/v1/stats` | Transmission statistics |
-| GET | `/metrics` | Prometheus metrics |
+| Method | Path            | Description                                     |
+| ------ | --------------- | ----------------------------------------------- |
+| GET    | `/health`       | Health check                                    |
+| GET    | `/ready`        | Readiness check (DB, RabbitMQ, circuit breaker) |
+| GET    | `/api/v1/stats` | Transmission statistics                         |
+| GET    | `/metrics`      | Prometheus metrics                              |
 
 ## Configuration
 
 Environment variables (prefix: `TRANSMITTER_`):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TRANSMITTER_SERVER_HOST` | `0.0.0.0` | Server bind host |
-| `TRANSMITTER_SERVER_PORT` | `8020` | Server port |
-| `TRANSMITTER_RABBITMQ_URL` | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL |
-| `TRANSMITTER_RABBITMQ_EXCHANGE` | `discovery.events` | RabbitMQ exchange |
-| `TRANSMITTER_RABBITMQ_QUEUE` | `transmitter.approved` | Queue name |
-| `TRANSMITTER_DATABASE_URL` | `postgresql://...` | PostgreSQL URL |
-| `TRANSMITTER_DESTINATION_URL` | `https://api.example.com/v1/discovery` | External API URL |
-| `TRANSMITTER_AUTH_TOKEN` | `` | API authentication token |
-| `TRANSMITTER_BATCH_SIZE` | `100` | Max items per batch |
-| `TRANSMITTER_BATCH_INTERVAL_S` | `60` | Batch interval (seconds) |
-| `TRANSMITTER_RETRY_MAX_ATTEMPTS` | `3` | Max retry attempts |
-| `TRANSMITTER_RETRY_BACKOFF_MULTIPLIER` | `2` | Exponential backoff multiplier |
-| `TRANSMITTER_RETRY_MAX_DELAY_S` | `300` | Max retry delay (seconds) |
-| `TRANSMITTER_CIRCUIT_FAILURE_THRESHOLD` | `5` | Failures to open circuit |
-| `TRANSMITTER_CIRCUIT_RESET_TIMEOUT_S` | `60` | Circuit reset timeout |
-| `TRANSMITTER_LOG_LEVEL` | `INFO` | Logging level |
+| Variable                                | Default                                      | Description                    |
+| --------------------------------------- | -------------------------------------------- | ------------------------------ |
+| `TRANSMITTER_SERVER_HOST`               | `0.0.0.0`                                    | Server bind host               |
+| `TRANSMITTER_SERVER_PORT`               | `8020`                                       | Server port                    |
+| `TRANSMITTER_RABBITMQ_URL`              | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL                   |
+| `TRANSMITTER_RABBITMQ_EXCHANGE`         | `discovery.events`                           | RabbitMQ exchange              |
+| `TRANSMITTER_RABBITMQ_QUEUE`            | `transmitter.approved`                       | Queue name                     |
+| `TRANSMITTER_DATABASE_URL`              | `postgresql://...`                           | PostgreSQL URL                 |
+| `TRANSMITTER_DESTINATION_URL`           | `https://api.example.com/v1/discovery`       | External API URL               |
+| `TRANSMITTER_AUTH_TOKEN`                | ``                                           | API authentication token       |
+| `TRANSMITTER_BATCH_SIZE`                | `100`                                        | Max items per batch            |
+| `TRANSMITTER_BATCH_INTERVAL_S`          | `60`                                         | Batch interval (seconds)       |
+| `TRANSMITTER_RETRY_MAX_ATTEMPTS`        | `3`                                          | Max retry attempts             |
+| `TRANSMITTER_RETRY_BACKOFF_MULTIPLIER`  | `2`                                          | Exponential backoff multiplier |
+| `TRANSMITTER_RETRY_MAX_DELAY_S`         | `300`                                        | Max retry delay (seconds)      |
+| `TRANSMITTER_CIRCUIT_FAILURE_THRESHOLD` | `5`                                          | Failures to open circuit       |
+| `TRANSMITTER_CIRCUIT_RESET_TIMEOUT_S`   | `60`                                         | Circuit reset timeout          |
+| `TRANSMITTER_LOG_LEVEL`                 | `INFO`                                       | Logging level                  |
 
 ## Batch Processing
 
@@ -74,12 +74,14 @@ The transmitter batches approved discoveries to reduce API calls:
 ## Retry & Circuit Breaker
 
 ### Retry Logic
+
 - Failed requests are retried with exponential backoff
 - `wait = multiplier^attempt` (capped at `max_delay`)
 - Only server errors (5xx) trigger retries
 - Client errors (4xx) fail immediately
 
 ### Circuit Breaker
+
 - Opens after `failure_threshold` consecutive failures
 - When open, requests fail fast without calling API
 - Closes after `reset_timeout` seconds

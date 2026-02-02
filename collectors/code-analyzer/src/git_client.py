@@ -153,8 +153,12 @@ class GitClient:
                 "remote_url": repo.remotes.origin.url if repo.remotes else None,
                 "branch": repo.active_branch.name if repo.head.is_valid() else None,
                 "commit": repo.head.commit.hexsha if repo.head.is_valid() else None,
-                "commit_message": repo.head.commit.message.strip() if repo.head.is_valid() else None,
-                "commit_date": repo.head.commit.committed_datetime.isoformat() if repo.head.is_valid() else None,
+                "commit_message": repo.head.commit.message.strip()
+                if repo.head.is_valid()
+                else None,
+                "commit_date": repo.head.commit.committed_datetime.isoformat()
+                if repo.head.is_valid()
+                else None,
             }
         except Exception as e:
             logger.warning(f"Failed to get repo info: {e}")

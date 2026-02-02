@@ -26,8 +26,12 @@ export default function RejectModal({
         <h2>Reject Discovery</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: "1rem" }}>
-            <label htmlFor="reason" style={{ display: "block", marginBottom: "0.5rem" }}>
-              Rejection Reason <span style={{ color: "var(--danger-color)" }}>*</span>
+            <label
+              htmlFor="reason"
+              style={{ display: "block", marginBottom: "0.5rem" }}
+            >
+              Rejection Reason{" "}
+              <span style={{ color: "var(--danger-color)" }}>*</span>
             </label>
             <textarea
               id="reason"

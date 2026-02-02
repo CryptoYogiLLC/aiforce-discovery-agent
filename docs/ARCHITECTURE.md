@@ -6,17 +6,17 @@ This document defines the technical architecture for the AIForce Discovery Agent
 
 ## Architecture Decisions Summary
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Deployment | Docker Compose + Helm + Binaries | Maximum client flexibility |
-| Service Architecture | 6 microservices | Educational value, clear separation |
-| Message Broker | RabbitMQ | Enterprise standard, full-featured |
-| Event Schemas | JSON Schema | Simple, human-readable, no build step |
-| Go Framework | Gin | Most popular, fast, good ecosystem |
-| Python Framework | FastAPI | Async, modern, matches main platform |
-| TypeScript Runtime | Node.js + Express | Standard, well-understood |
-| Configuration | YAML + env override | Flexible, 12-factor compatible |
-| Databases | Mixed (SQLite collectors, PostgreSQL gateway) | Right tool for each job |
+| Decision             | Choice                                        | Rationale                             |
+| -------------------- | --------------------------------------------- | ------------------------------------- |
+| Deployment           | Docker Compose + Helm + Binaries              | Maximum client flexibility            |
+| Service Architecture | 6 microservices                               | Educational value, clear separation   |
+| Message Broker       | RabbitMQ                                      | Enterprise standard, full-featured    |
+| Event Schemas        | JSON Schema                                   | Simple, human-readable, no build step |
+| Go Framework         | Gin                                           | Most popular, fast, good ecosystem    |
+| Python Framework     | FastAPI                                       | Async, modern, matches main platform  |
+| TypeScript Runtime   | Node.js + Express                             | Standard, well-understood             |
+| Configuration        | YAML + env override                           | Flexible, 12-factor compatible        |
+| Databases            | Mixed (SQLite collectors, PostgreSQL gateway) | Right tool for each job               |
 
 ---
 
@@ -92,15 +92,16 @@ This document defines the technical architecture for the AIForce Discovery Agent
 
 ### 1. Network Scanner (Go)
 
-| Attribute | Value |
-|-----------|-------|
-| **Language** | Go 1.22+ |
-| **Framework** | Gin |
-| **Database** | SQLite (embedded) |
-| **Port** | 8001 |
-| **Owner** | Dev 1 |
+| Attribute     | Value             |
+| ------------- | ----------------- |
+| **Language**  | Go 1.22+          |
+| **Framework** | Gin               |
+| **Database**  | SQLite (embedded) |
+| **Port**      | 8001              |
+| **Owner**     | Dev 1             |
 
 **Responsibilities:**
+
 - TCP/UDP port scanning
 - Service fingerprinting
 - Network topology discovery
@@ -114,6 +115,7 @@ This document defines the technical architecture for the AIForce Discovery Agent
 | `discovery.networkflow.discovered` | `discovered.networkflow` | Source, destination, protocol |
 
 **Configuration:**
+
 ```yaml
 network_scanner:
   subnets:
@@ -132,15 +134,16 @@ network_scanner:
 
 ### 2. Code Analyzer (Python)
 
-| Attribute | Value |
-|-----------|-------|
-| **Language** | Python 3.11+ |
-| **Framework** | FastAPI |
-| **Database** | SQLite (embedded) |
-| **Port** | 8002 |
-| **Owner** | Dev 2 |
+| Attribute     | Value             |
+| ------------- | ----------------- |
+| **Language**  | Python 3.11+      |
+| **Framework** | FastAPI           |
+| **Database**  | SQLite (embedded) |
+| **Port**      | 8002              |
+| **Owner**     | Dev 2             |
 
 **Responsibilities:**
+
 - Git repository scanning
 - Language/framework detection
 - Dependency extraction
@@ -155,11 +158,12 @@ network_scanner:
 | `discovery.dependency.discovered` | `discovered.dependency` | Package name, version, vulnerabilities |
 
 **Configuration:**
+
 ```yaml
 code_analyzer:
   git_credentials_env: GIT_TOKEN
   max_repo_size_mb: 500
-  analyze_depth: full  # full | shallow
+  analyze_depth: full # full | shallow
   include_patterns:
     - "*.java"
     - "*.py"
@@ -173,15 +177,16 @@ code_analyzer:
 
 ### 3. Database Inspector (Python)
 
-| Attribute | Value |
-|-----------|-------|
-| **Language** | Python 3.11+ |
-| **Framework** | FastAPI |
-| **Database** | SQLite (embedded) |
-| **Port** | 8003 |
-| **Owner** | Dev 3 |
+| Attribute     | Value             |
+| ------------- | ----------------- |
+| **Language**  | Python 3.11+      |
+| **Framework** | FastAPI           |
+| **Database**  | SQLite (embedded) |
+| **Port**      | 8003              |
+| **Owner**     | Dev 3             |
 
 **Responsibilities:**
+
 - Multi-database connectivity (PostgreSQL, MySQL, Oracle, SQL Server, MongoDB)
 - Schema extraction
 - Relationship mapping
@@ -196,10 +201,11 @@ code_analyzer:
 | `discovery.relationship.discovered` | `discovered.relationship` | FK relationships, cardinality |
 
 **Configuration:**
+
 ```yaml
 db_inspector:
   connection_timeout_s: 30
-  sample_rows: 100  # For PII detection
+  sample_rows: 100 # For PII detection
   supported_databases:
     - postgresql
     - mysql
@@ -219,21 +225,22 @@ db_inspector:
 
 Three stateless services sharing common patterns:
 
-| Service | Port | Responsibility |
-|---------|------|----------------|
-| **Enrichment** | 8010 | Correlate discoveries, add context |
-| **PII Redactor** | 8011 | Detect and mask sensitive data |
-| **Scoring** | 8012 | Calculate complexity/effort scores |
+| Service          | Port | Responsibility                     |
+| ---------------- | ---- | ---------------------------------- |
+| **Enrichment**   | 8010 | Correlate discoveries, add context |
+| **PII Redactor** | 8011 | Detect and mask sensitive data     |
+| **Scoring**      | 8012 | Calculate complexity/effort scores |
 
-| Attribute | Value |
-|-----------|-------|
-| **Language** | Python 3.11+ |
-| **Framework** | FastAPI |
-| **Database** | None (stateless) |
-| **Cache** | Redis (optional) |
-| **Owner** | Dev 4 |
+| Attribute     | Value            |
+| ------------- | ---------------- |
+| **Language**  | Python 3.11+     |
+| **Framework** | FastAPI          |
+| **Database**  | None (stateless) |
+| **Cache**     | Redis (optional) |
+| **Owner**     | Dev 4            |
 
 **Event Flow:**
+
 ```
 discovered.* → Enrichment → enriched.*
 enriched.*   → PII Redactor → redacted.*
@@ -245,17 +252,18 @@ scored.*     → Approval Gateway
 
 ### 5. Approval Gateway (TypeScript/React)
 
-| Attribute | Value |
-|-----------|-------|
-| **Language** | TypeScript |
-| **Backend** | Node.js + Express |
-| **Frontend** | React + Vite |
-| **Database** | PostgreSQL |
-| **Cache** | Redis |
-| **Port** | 3000 (UI), 3001 (API) |
-| **Owner** | Dev 5 |
+| Attribute    | Value                 |
+| ------------ | --------------------- |
+| **Language** | TypeScript            |
+| **Backend**  | Node.js + Express     |
+| **Frontend** | React + Vite          |
+| **Database** | PostgreSQL            |
+| **Cache**    | Redis                 |
+| **Port**     | 3000 (UI), 3001 (API) |
+| **Owner**    | Dev 5                 |
 
 **Responsibilities:**
+
 - Web UI for reviewing discoveries
 - Approval/rejection workflow
 - Audit trail
@@ -276,15 +284,16 @@ scored.*     → Approval Gateway
 
 ### 6. Transmitter (Python)
 
-| Attribute | Value |
-|-----------|-------|
-| **Language** | Python 3.11+ |
-| **Framework** | FastAPI |
-| **Database** | PostgreSQL (shared with Gateway) |
-| **Port** | 8020 |
-| **Owner** | Dev 6 |
+| Attribute     | Value                            |
+| ------------- | -------------------------------- |
+| **Language**  | Python 3.11+                     |
+| **Framework** | FastAPI                          |
+| **Database**  | PostgreSQL (shared with Gateway) |
+| **Port**      | 8020                             |
+| **Owner**     | Dev 6                            |
 
 **Responsibilities:**
+
 - Batch approved discoveries
 - Compress and sign payloads
 - Transmit to AIForce Assess
@@ -292,6 +301,7 @@ scored.*     → Approval Gateway
 - Circuit breaker for failures
 
 **Configuration:**
+
 ```yaml
 transmitter:
   destination_url: ${ASSESS_API_URL}
@@ -315,9 +325,9 @@ transmitter:
 
 ```yaml
 # Exchanges
-discovery.events:    # fanout - all collectors publish here
-processing.events:   # topic - processing pipeline
-gateway.events:      # direct - approved items
+discovery.events: # fanout - all collectors publish here
+processing.events: # topic - processing pipeline
+gateway.events: # direct - approved items
 
 # Queues (with DLQ)
 enrichment.queue:
@@ -406,7 +416,10 @@ All events follow CloudEvents specification with custom data payload.
   "required": ["specversion", "type", "source", "id", "time", "data"],
   "properties": {
     "specversion": { "const": "1.0" },
-    "type": { "type": "string", "pattern": "^discovery\\.[a-z][a-z0-9]*\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$" },
+    "type": {
+      "type": "string",
+      "pattern": "^discovery\\.[a-z][a-z0-9]*\\.(discovered|enriched|redacted|scored|approved|rejected|failed)$"
+    },
     "source": { "type": "string", "format": "uri-reference" },
     "id": { "type": "string", "format": "uuid" },
     "time": { "type": "string", "format": "date-time" },
@@ -498,6 +511,7 @@ docker-compose up -d
 ```
 
 Single command, all services, suitable for:
+
 - Development
 - Small client environments
 - Demo/POC
@@ -511,6 +525,7 @@ helm install discovery-agent ./helm/discovery-agent \
 ```
 
 Suitable for:
+
 - Enterprise Kubernetes clusters
 - Production deployments
 - Auto-scaling requirements
@@ -524,6 +539,7 @@ Suitable for:
 ```
 
 Suitable for:
+
 - Air-gapped environments
 - Minimal footprint requirements
 - Edge deployments
@@ -553,14 +569,15 @@ All services log in consistent JSON format:
 
 All services expose:
 
-| Endpoint | Response |
-|----------|----------|
+| Endpoint      | Response                                    |
+| ------------- | ------------------------------------------- |
 | `GET /health` | `{"status": "healthy", "version": "1.0.0"}` |
-| `GET /ready` | `{"ready": true}` (after initialization) |
+| `GET /ready`  | `{"ready": true}` (after initialization)    |
 
 ### Metrics (Prometheus)
 
 All services expose `GET /metrics` with:
+
 - `discovery_events_published_total`
 - `discovery_events_processed_total`
 - `discovery_processing_duration_seconds`
@@ -573,6 +590,7 @@ All services expose `GET /metrics` with:
 See [SECURITY.md](../SECURITY.md) for full details.
 
 **Key Points:**
+
 - Outbound-only communication
 - TLS 1.3 for all external traffic
 - No inbound ports required
@@ -604,15 +622,15 @@ See [SECURITY.md](../SECURITY.md) for full details.
 
 ## Appendix: Technology Stack
 
-| Layer | Technology | Version |
-|-------|------------|---------|
-| **Languages** | Go, Python, TypeScript | 1.22+, 3.11+, 5.0+ |
-| **Go Framework** | Gin | 1.9+ |
-| **Python Framework** | FastAPI | 0.109+ |
-| **Node Framework** | Express | 4.18+ |
-| **Frontend** | React + Vite | 18+, 5+ |
-| **Message Broker** | RabbitMQ | 3.12+ |
-| **Database** | PostgreSQL, SQLite | 16+, 3.40+ |
-| **Cache** | Redis | 7+ |
-| **Containers** | Docker | 24+ |
-| **Orchestration** | Docker Compose, Kubernetes | 2.20+, 1.28+ |
+| Layer                | Technology                 | Version            |
+| -------------------- | -------------------------- | ------------------ |
+| **Languages**        | Go, Python, TypeScript     | 1.22+, 3.11+, 5.0+ |
+| **Go Framework**     | Gin                        | 1.9+               |
+| **Python Framework** | FastAPI                    | 0.109+             |
+| **Node Framework**   | Express                    | 4.18+              |
+| **Frontend**         | React + Vite               | 18+, 5+            |
+| **Message Broker**   | RabbitMQ                   | 3.12+              |
+| **Database**         | PostgreSQL, SQLite         | 16+, 3.40+         |
+| **Cache**            | Redis                      | 7+                 |
+| **Containers**       | Docker                     | 24+                |
+| **Orchestration**    | Docker Compose, Kubernetes | 2.20+, 1.28+       |

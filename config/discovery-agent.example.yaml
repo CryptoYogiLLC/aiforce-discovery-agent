@@ -7,9 +7,9 @@
 collection:
   # Enable/disable collectors
   network_scan: true
-  code_repos: false        # Requires repo access - opt-in only
+  code_repos: false # Requires repo access - opt-in only
   database_schemas: true
-  api_endpoints: false     # Requires sidecar deployment
+  api_endpoints: false # Requires sidecar deployment
 
   # Network scope
   include_subnets:
@@ -18,10 +18,10 @@ collection:
     - 192.168.0.0/16
 
   exclude_subnets:
-    - 10.0.99.0/24         # Example: sensitive zone
+    - 10.0.99.0/24 # Example: sensitive zone
 
   exclude_servers:
-    - "*-pci-*"            # Example: PCI servers
+    - "*-pci-*" # Example: PCI servers
     - "prod-payment-*"
 
   exclude_databases:
@@ -34,10 +34,10 @@ collection:
 data_handling:
   # Automatic PII redaction
   redact_emails: true
-  redact_ip_addresses: false    # Set true if IPs are sensitive
+  redact_ip_addresses: false # Set true if IPs are sensitive
   redact_hostnames: false
   redact_usernames: true
-  redact_credentials: true      # Always recommended
+  redact_credentials: true # Always recommended
 
   # Custom redaction patterns (regex)
   custom_patterns:
@@ -57,7 +57,7 @@ transmission:
 
   # Authentication
   auth:
-    type: bearer           # bearer | api_key | oauth2
+    type: bearer # bearer | api_key | oauth2
     # token loaded from environment: DISCOVERY_AGENT_TOKEN
 
   # Batching
@@ -65,7 +65,7 @@ transmission:
   batch_interval_seconds: 60
 
   # What to send
-  send_raw_metrics: false  # Send aggregates only
+  send_raw_metrics: false # Send aggregates only
   send_code_snippets: false # Send hashes only
   send_schema_details: true
 
@@ -94,8 +94,8 @@ observability:
     port: 9090
 
   # Logging
-  log_level: INFO          # DEBUG | INFO | WARNING | ERROR
-  log_format: json         # json | text
+  log_level: INFO # DEBUG | INFO | WARNING | ERROR
+  log_format: json # json | text
 
 # =============================================================================
 # APPROVAL GATEWAY
@@ -106,5 +106,5 @@ gateway:
 
   # Authentication (local)
   auth:
-    type: local            # local | ldap | oidc
+    type: local # local | ldap | oidc
     # For local auth, set GATEWAY_ADMIN_PASSWORD environment variable

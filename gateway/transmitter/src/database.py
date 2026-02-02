@@ -124,9 +124,7 @@ class Database:
                 datetime.now(timezone.utc),
             )
 
-    async def update_batch_success(
-        self, batch_id: str, http_status: int
-    ) -> None:
+    async def update_batch_success(self, batch_id: str, http_status: int) -> None:
         """Mark batch as successfully transmitted."""
         if not self.pool:
             raise RuntimeError("Database not connected")

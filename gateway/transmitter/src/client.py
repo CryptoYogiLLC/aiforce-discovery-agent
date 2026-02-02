@@ -66,9 +66,7 @@ class APIClient:
         """Check if circuit breaker is open."""
         return self._circuit_breaker.opened
 
-    async def send_batch(
-        self, items: list[dict[str, Any]]
-    ) -> tuple[int, str | None]:
+    async def send_batch(self, items: list[dict[str, Any]]) -> tuple[int, str | None]:
         """
         Send a batch of items to the external API.
 
@@ -116,8 +114,7 @@ class APIClient:
         # Compress with gzip
         compressed = gzip.compress(payload)
         logger.debug(
-            f"Payload size: {len(payload)} bytes, "
-            f"compressed: {len(compressed)} bytes"
+            f"Payload size: {len(payload)} bytes, compressed: {len(compressed)} bytes"
         )
 
         # Prepare headers
@@ -136,8 +133,7 @@ class APIClient:
             )
 
             logger.info(
-                f"Transmission response: {response.status_code} "
-                f"for {len(items)} items"
+                f"Transmission response: {response.status_code} for {len(items)} items"
             )
 
             if response.status_code >= 500:

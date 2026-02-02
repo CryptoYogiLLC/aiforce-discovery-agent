@@ -26,25 +26,26 @@ Analyze source code repositories for languages, frameworks, dependencies, and co
 
 ## Events Published
 
-| CloudEvents Type | Routing Key | Description |
-|------------------|-------------|-------------|
+| CloudEvents Type                  | Routing Key             | Description                                   |
+| --------------------------------- | ----------------------- | --------------------------------------------- |
 | `discovery.repository.discovered` | `discovered.repository` | Repository analyzed with languages/frameworks |
-| `discovery.codebase.discovered` | `discovered.codebase` | Codebase metrics calculated |
-| `discovery.dependency.discovered` | `discovered.dependency` | Dependency identified |
+| `discovery.codebase.discovered`   | `discovered.codebase`   | Codebase metrics calculated                   |
+| `discovery.dependency.discovered` | `discovered.dependency` | Dependency identified                         |
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/ready` | Readiness check (RabbitMQ connection) |
-| GET | `/api/v1/stats` | Service statistics |
-| GET | `/metrics` | Prometheus metrics |
-| POST | `/api/v1/analyze` | Analyze a repository |
+| Method | Path              | Description                           |
+| ------ | ----------------- | ------------------------------------- |
+| GET    | `/health`         | Health check                          |
+| GET    | `/ready`          | Readiness check (RabbitMQ connection) |
+| GET    | `/api/v1/stats`   | Service statistics                    |
+| GET    | `/metrics`        | Prometheus metrics                    |
+| POST   | `/api/v1/analyze` | Analyze a repository                  |
 
 ### POST /api/v1/analyze
 
 Request body:
+
 ```json
 {
   "repo_url": "https://github.com/owner/repo",
@@ -54,6 +55,7 @@ Request body:
 ```
 
 Response:
+
 ```json
 {
   "status": "completed",
@@ -66,19 +68,19 @@ Response:
 
 Environment variables (prefix: `CODEANALYZER_`):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CODEANALYZER_SERVER_HOST` | `0.0.0.0` | Server bind host |
-| `CODEANALYZER_SERVER_PORT` | `8002` | Server port |
-| `CODEANALYZER_RABBITMQ_URL` | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL |
-| `CODEANALYZER_RABBITMQ_EXCHANGE` | `discovery.events` | RabbitMQ exchange |
-| `CODEANALYZER_GIT_TOKEN` | `` | Default Git authentication token |
-| `CODEANALYZER_MAX_REPO_SIZE_MB` | `500` | Maximum repository size to clone |
-| `CODEANALYZER_CLONE_DEPTH` | `shallow` | Clone depth (shallow/full) |
-| `CODEANALYZER_CLONE_TIMEOUT_S` | `300` | Clone timeout in seconds |
-| `CODEANALYZER_MAX_FILE_SIZE_KB` | `1024` | Max file size to analyze |
-| `CODEANALYZER_EXCLUDED_DIRS` | `node_modules,.git,vendor,...` | Directories to exclude |
-| `CODEANALYZER_LOG_LEVEL` | `INFO` | Logging level |
+| Variable                         | Default                                      | Description                      |
+| -------------------------------- | -------------------------------------------- | -------------------------------- |
+| `CODEANALYZER_SERVER_HOST`       | `0.0.0.0`                                    | Server bind host                 |
+| `CODEANALYZER_SERVER_PORT`       | `8002`                                       | Server port                      |
+| `CODEANALYZER_RABBITMQ_URL`      | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL                     |
+| `CODEANALYZER_RABBITMQ_EXCHANGE` | `discovery.events`                           | RabbitMQ exchange                |
+| `CODEANALYZER_GIT_TOKEN`         | ``                                           | Default Git authentication token |
+| `CODEANALYZER_MAX_REPO_SIZE_MB`  | `500`                                        | Maximum repository size to clone |
+| `CODEANALYZER_CLONE_DEPTH`       | `shallow`                                    | Clone depth (shallow/full)       |
+| `CODEANALYZER_CLONE_TIMEOUT_S`   | `300`                                        | Clone timeout in seconds         |
+| `CODEANALYZER_MAX_FILE_SIZE_KB`  | `1024`                                       | Max file size to analyze         |
+| `CODEANALYZER_EXCLUDED_DIRS`     | `node_modules,.git,vendor,...`               | Directories to exclude           |
+| `CODEANALYZER_LOG_LEVEL`         | `INFO`                                       | Logging level                    |
 
 ## Supported Languages
 
@@ -95,54 +97,64 @@ The analyzer detects 20+ programming languages:
 The analyzer detects 30+ frameworks:
 
 **JavaScript/TypeScript:**
+
 - React, Next.js, Vue.js, Nuxt.js, Angular, Svelte
 - Express.js, NestJS, Fastify
 
 **Python:**
+
 - Django, FastAPI, Flask, Tornado, Pyramid
 - Celery, SQLAlchemy
 
 **Java:**
+
 - Spring Boot, Spring Framework, Hibernate
 - Maven, Gradle
 
 **Go:**
+
 - Gin, Echo, Fiber, Chi, GORM
 
 **Ruby:**
+
 - Ruby on Rails, Sinatra
 
 **Rust:**
+
 - Actix Web, Rocket, Axum
 
 **C#:**
+
 - ASP.NET Core, Entity Framework
 
 **PHP:**
+
 - Laravel, Symfony
 
 **Infrastructure:**
+
 - Docker, Kubernetes, Terraform, Helm
 
 ## Dependency Extraction
 
 Supports extraction from:
 
-| File | Package Manager | Language |
-|------|----------------|----------|
-| `package.json` | npm/yarn | JavaScript |
-| `requirements.txt` | pip | Python |
-| `pyproject.toml` | poetry/pip | Python |
-| `go.mod` | Go modules | Go |
-| `pom.xml` | Maven | Java |
-| `build.gradle` | Gradle | Java |
-| `Gemfile` | Bundler | Ruby |
-| `Cargo.toml` | Cargo | Rust |
-| `composer.json` | Composer | PHP |
+| File               | Package Manager | Language   |
+| ------------------ | --------------- | ---------- |
+| `package.json`     | npm/yarn        | JavaScript |
+| `requirements.txt` | pip             | Python     |
+| `pyproject.toml`   | poetry/pip      | Python     |
+| `go.mod`           | Go modules      | Go         |
+| `pom.xml`          | Maven           | Java       |
+| `build.gradle`     | Gradle          | Java       |
+| `Gemfile`          | Bundler         | Ruby       |
+| `Cargo.toml`       | Cargo           | Rust       |
+| `composer.json`    | Composer        | PHP        |
 
 ## Metrics Calculated
 
 ### Code Metrics
+
 - Lines of code (LOC)
 - Blank lines
 - Comment lines
@@ -151,12 +163,14 @@ Supports extraction from:
 - Largest files (top 10)
 
 ### Complexity Metrics
+
 - Cyclomatic complexity (Python)
 - Average complexity
 - Maximum complexity
 - Files above threshold (>10)
 
 ### Technical Debt Indicators
+
 - TODO comment count
 - FIXME comment count
 - HACK comment count

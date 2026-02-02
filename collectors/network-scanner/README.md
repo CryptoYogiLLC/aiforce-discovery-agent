@@ -23,22 +23,22 @@ Discover servers, services, and network topology within configured subnets. Perf
 
 ## Events Published
 
-| CloudEvents Type | Routing Key | Description |
-|------------------|-------------|-------------|
-| `discovery.server.discovered` | `discovered.server` | New server discovered |
+| CloudEvents Type               | Routing Key          | Description                  |
+| ------------------------------ | -------------------- | ---------------------------- |
+| `discovery.server.discovered`  | `discovered.server`  | New server discovered        |
 | `discovery.service.discovered` | `discovered.service` | Service identified on a port |
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/ready` | Readiness check |
-| GET | `/metrics` | Prometheus metrics (placeholder) |
-| POST | `/api/v1/scan/start` | Start scanning configured subnets |
-| POST | `/api/v1/scan/stop` | Stop active scan |
-| GET | `/api/v1/scan/status` | Get scanner status |
-| POST | `/api/v1/scan/target` | Scan specific IP address |
+| Method | Path                  | Description                       |
+| ------ | --------------------- | --------------------------------- |
+| GET    | `/health`             | Health check                      |
+| GET    | `/ready`              | Readiness check                   |
+| GET    | `/metrics`            | Prometheus metrics (placeholder)  |
+| POST   | `/api/v1/scan/start`  | Start scanning configured subnets |
+| POST   | `/api/v1/scan/stop`   | Stop active scan                  |
+| GET    | `/api/v1/scan/status` | Get scanner status                |
+| POST   | `/api/v1/scan/target` | Scan specific IP address          |
 
 ## Configuration
 
@@ -67,9 +67,9 @@ scanner:
     - 6379
     - 8080
     - 27017
-  rate_limit: 100      # scans per second
-  timeout: 2000        # connection timeout (ms)
-  concurrency: 100     # max concurrent scans
+  rate_limit: 100 # scans per second
+  timeout: 2000 # connection timeout (ms)
+  concurrency: 100 # max concurrent scans
   enable_udp: false
 
 rabbitmq:
@@ -82,6 +82,7 @@ logging:
 ```
 
 Environment variables override config file:
+
 - `SCANNER_SERVER_PORT` → `server.port`
 - `SCANNER_SCANNER_RATE_LIMIT` → `scanner.rate_limit`
 - `RABBITMQ_URL` → `rabbitmq.url`

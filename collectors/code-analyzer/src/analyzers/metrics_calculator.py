@@ -11,11 +11,46 @@ logger = logging.getLogger(__name__)
 
 # File extensions to analyze for metrics
 CODE_EXTENSIONS = {
-    ".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".java", ".kt", ".scala",
-    ".rb", ".rs", ".c", ".cpp", ".cc", ".h", ".hpp", ".cs", ".php",
-    ".swift", ".m", ".mm", ".pl", ".sh", ".bash", ".lua", ".r", ".jl",
-    ".ex", ".exs", ".erl", ".clj", ".dart", ".groovy", ".hs", ".ml",
-    ".fs", ".v", ".zig", ".nim", ".cr",
+    ".py",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".go",
+    ".java",
+    ".kt",
+    ".scala",
+    ".rb",
+    ".rs",
+    ".c",
+    ".cpp",
+    ".cc",
+    ".h",
+    ".hpp",
+    ".cs",
+    ".php",
+    ".swift",
+    ".m",
+    ".mm",
+    ".pl",
+    ".sh",
+    ".bash",
+    ".lua",
+    ".r",
+    ".jl",
+    ".ex",
+    ".exs",
+    ".erl",
+    ".clj",
+    ".dart",
+    ".groovy",
+    ".hs",
+    ".ml",
+    ".fs",
+    ".v",
+    ".zig",
+    ".nim",
+    ".cr",
 }
 
 
@@ -95,9 +130,15 @@ class MetricsCalculator:
                     metrics["comment_lines"] += file_metrics["comment_lines"]
 
                     # Tech debt indicators
-                    metrics["tech_debt_indicators"]["todo_count"] += file_metrics["todo_count"]
-                    metrics["tech_debt_indicators"]["fixme_count"] += file_metrics["fixme_count"]
-                    metrics["tech_debt_indicators"]["hack_count"] += file_metrics["hack_count"]
+                    metrics["tech_debt_indicators"]["todo_count"] += file_metrics[
+                        "todo_count"
+                    ]
+                    metrics["tech_debt_indicators"]["fixme_count"] += file_metrics[
+                        "fixme_count"
+                    ]
+                    metrics["tech_debt_indicators"]["hack_count"] += file_metrics[
+                        "hack_count"
+                    ]
 
                     if file_metrics["total_lines"] > 500:
                         metrics["tech_debt_indicators"]["large_files"] += 1
@@ -122,7 +163,9 @@ class MetricsCalculator:
             metrics["average_file_size"] = total_size / metrics["code_files"]
 
         if complexity_count > 0:
-            metrics["complexity"]["average"] = round(total_complexity / complexity_count, 2)
+            metrics["complexity"]["average"] = round(
+                total_complexity / complexity_count, 2
+            )
             metrics["complexity"]["max"] = max_complexity
 
         # Find largest files
@@ -183,7 +226,21 @@ class MetricsCalculator:
                 is_comment = False
                 if ext in {".py", ".rb", ".sh", ".bash", ".pl", ".r"}:
                     is_comment = stripped.startswith("#")
-                elif ext in {".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".c", ".cpp", ".cs", ".swift", ".kt", ".rs", ".php"}:
+                elif ext in {
+                    ".js",
+                    ".ts",
+                    ".jsx",
+                    ".tsx",
+                    ".java",
+                    ".go",
+                    ".c",
+                    ".cpp",
+                    ".cs",
+                    ".swift",
+                    ".kt",
+                    ".rs",
+                    ".php",
+                }:
                     if stripped.startswith("//"):
                         is_comment = True
                     elif stripped.startswith("/*"):
@@ -230,8 +287,13 @@ class MetricsCalculator:
             # Fallback: count decision points
             complexity = 1
             decision_keywords = [
-                r"\bif\b", r"\belif\b", r"\bfor\b", r"\bwhile\b",
-                r"\band\b", r"\bor\b", r"\bexcept\b",
+                r"\bif\b",
+                r"\belif\b",
+                r"\bfor\b",
+                r"\bwhile\b",
+                r"\band\b",
+                r"\bor\b",
+                r"\bexcept\b",
             ]
             for keyword in decision_keywords:
                 complexity += len(re.findall(keyword, content))

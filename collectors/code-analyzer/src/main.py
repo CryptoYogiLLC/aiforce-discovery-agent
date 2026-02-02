@@ -45,7 +45,10 @@ app_state: dict[str, Any] = {
 
 async def get_rabbitmq_connection() -> aio_pika.RobustConnection:
     """Get or create RabbitMQ connection."""
-    if app_state["rabbitmq_connection"] is None or app_state["rabbitmq_connection"].is_closed:
+    if (
+        app_state["rabbitmq_connection"] is None
+        or app_state["rabbitmq_connection"].is_closed
+    ):
         app_state["rabbitmq_connection"] = await aio_pika.connect_robust(
             settings.rabbitmq_url
         )

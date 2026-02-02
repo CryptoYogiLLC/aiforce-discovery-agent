@@ -1,6 +1,5 @@
 """Tests for framework detection."""
 
-import pytest
 from src.analyzers.framework_detector import FrameworkDetector
 
 

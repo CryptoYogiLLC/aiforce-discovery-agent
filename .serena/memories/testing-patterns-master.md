@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. Explicit waits, NEVER arbitrary timeouts
 > 2. Test against Docker, not local dev server
 > 3. Validate database state, not just API response
@@ -23,19 +24,21 @@
 Flaky tests were a **constant issue** in parent project.
 
 ### Wrong
+
 ```typescript
 // Arbitrary delay - FLAKY
 await page.waitForTimeout(3000);
 ```
 
 ### Correct
+
 ```typescript
 // Wait for specific condition
 await page.waitForSelector('[data-testid="results-table"]');
-await expect(page.locator('.status')).toHaveText('Complete');
+await expect(page.locator(".status")).toHaveText("Complete");
 
 // Wait for network to be idle
-await page.waitForLoadState('networkidle');
+await page.waitForLoadState("networkidle");
 ```
 
 ---
@@ -43,6 +46,7 @@ await page.waitForLoadState('networkidle');
 ## Critical Pattern: Test Against Docker
 
 ### Wrong
+
 ```bash
 # Testing against local dev server - different behavior
 npm run dev &
@@ -50,6 +54,7 @@ npm run test:e2e
 ```
 
 ### Correct
+
 ```bash
 # Test against containerized services
 docker-compose up -d
@@ -89,6 +94,7 @@ pre-commit install
 ```
 
 Common fixes:
+
 - Ruff reformatting (auto-fixed, re-stage files)
 - Line length > 120 (shorten descriptions)
 - Trailing whitespace (auto-fixed)
@@ -112,6 +118,7 @@ await page.click('[data-testid="submit-discovery"]');
 ## Test Structure by Service
 
 ### Go (Network Scanner)
+
 ```bash
 cd collectors/network-scanner
 go test ./...
@@ -120,6 +127,7 @@ go test -cover ./...               # With coverage
 ```
 
 ### Python (Analyzers)
+
 ```bash
 cd collectors/code-analyzer
 pytest tests/
@@ -128,6 +136,7 @@ pytest --cov=src tests/            # With coverage
 ```
 
 ### TypeScript (Approval UI)
+
 ```bash
 cd gateway/approval-ui
 npm run test
@@ -138,12 +147,12 @@ npm run test -- --watch           # Watch mode
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why Bad | Do Instead |
-|--------------|---------|------------|
-| `waitForTimeout(ms)` | Flaky | `waitForSelector()` |
-| Testing local dev | Different behavior | Test against Docker |
-| Only check response | Misses DB bugs | Validate DB state |
-| Skip pre-commit | CI failures | Always run locally |
+| Anti-Pattern         | Why Bad            | Do Instead          |
+| -------------------- | ------------------ | ------------------- |
+| `waitForTimeout(ms)` | Flaky              | `waitForSelector()` |
+| Testing local dev    | Different behavior | Test against Docker |
+| Only check response  | Misses DB bugs     | Validate DB state   |
+| Skip pre-commit      | CI failures        | Always run locally  |
 
 ---
 

@@ -118,8 +118,7 @@ class BatchProcessor:
         )
 
         logger.info(
-            f"Processing batch {batch_id}: {len(items)} items, "
-            f"{payload_size} bytes"
+            f"Processing batch {batch_id}: {len(items)} items, {payload_size} bytes"
         )
 
         try:
@@ -138,9 +137,7 @@ class BatchProcessor:
                     retry_count=0,
                 )
                 self._batches_failed += 1
-                logger.error(
-                    f"Batch {batch_id} failed: {status_code} - {error}"
-                )
+                logger.error(f"Batch {batch_id} failed: {status_code} - {error}")
             else:
                 # Success
                 await self.database.update_batch_success(batch_id, status_code)
@@ -156,9 +153,7 @@ class BatchProcessor:
                 retry_count=self.api_client.retry_max_attempts,
             )
             self._batches_failed += 1
-            logger.error(
-                f"Batch {batch_id} failed after retries: {e}"
-            )
+            logger.error(f"Batch {batch_id} failed after retries: {e}")
 
             # Re-queue items on transmission failure (except for client errors)
             if e.status_code is None or e.status_code >= 500:

@@ -11,6 +11,7 @@ def client():
     # Mock RabbitMQ connection for testing
     with patch("src.main.get_rabbitmq_connection", new_callable=AsyncMock):
         from src.main import app
+
         return TestClient(app)
 
 
@@ -28,6 +29,7 @@ class TestHealthEndpoints:
         with patch("src.main.get_rabbitmq_connection") as mock_conn:
             mock_conn.side_effect = Exception("Connection failed")
             from src.main import app
+
             client = TestClient(app)
             response = client.get("/ready")
             assert response.status_code == 503

@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     postgres_port: int = Field(default=5432, description="PostgreSQL port")
     postgres_user: str = Field(default="postgres", description="PostgreSQL user")
     postgres_password: str = Field(default="", description="PostgreSQL password")
-    postgres_database: str = Field(default="postgres", description="PostgreSQL database")
+    postgres_database: str = Field(
+        default="postgres", description="PostgreSQL database"
+    )
 
     # MySQL default connection (for on-demand scanning)
     mysql_host: str = Field(default="localhost", description="MySQL host")

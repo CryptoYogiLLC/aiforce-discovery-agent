@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. POST/PUT/DELETE use request body, NEVER query params
 > 2. snake_case everywhere (frontend AND backend)
 > 3. Return empty arrays [], never null for collections
@@ -23,10 +24,11 @@
 This bug was fixed **4 times in 6 months** in the parent project.
 
 ### Wrong (Causes 422 Errors)
+
 ```typescript
 // Frontend - WRONG
 const response = await fetch(`/api/endpoint?field=value`, {
-  method: 'POST'
+  method: "POST",
 });
 ```
 
@@ -38,12 +40,13 @@ async def create_item(request: CreateItemRequest):  # Pydantic model
 ```
 
 ### Correct
+
 ```typescript
 // Frontend - CORRECT
-const response = await fetch('/api/endpoint', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ field: 'value' })
+const response = await fetch("/api/endpoint", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ field: "value" }),
 });
 ```
 
@@ -56,6 +59,7 @@ const response = await fetch('/api/endpoint', {
 Mismatch between `confidence` (backend) and `confidence_score` (frontend) caused "NaN%" displays.
 
 ### Correct
+
 ```python
 # Backend
 class ApplicationData(BaseModel):
@@ -67,18 +71,19 @@ class ApplicationData(BaseModel):
 ```typescript
 // Frontend - MATCH EXACTLY
 interface ApplicationData {
-    app_name: string;       // NOT appName
-    created_at: string;     // NOT createdAt
-    confidence_score: number;
+  app_name: string; // NOT appName
+  created_at: string; // NOT createdAt
+  confidence_score: number;
 }
 ```
 
 ### Never Do
+
 ```typescript
 // WRONG - camelCase
 interface ApplicationData {
-    appName: string;
-    createdAt: string;
+  appName: string;
+  createdAt: string;
 }
 ```
 
@@ -116,12 +121,12 @@ class CreateItemRequest(BaseModel):
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why Bad | Do Instead |
-|--------------|---------|------------|
-| Query params for POST | 422 errors | Request body |
-| camelCase in API | Schema mismatch | snake_case |
-| Optional collections | Frontend crashes | Empty array default |
-| String interpolation in SQL | Injection | Parameterized queries |
+| Anti-Pattern                | Why Bad          | Do Instead            |
+| --------------------------- | ---------------- | --------------------- |
+| Query params for POST       | 422 errors       | Request body          |
+| camelCase in API            | Schema mismatch  | snake_case            |
+| Optional collections        | Frontend crashes | Empty array default   |
+| String interpolation in SQL | Injection        | Parameterized queries |
 
 ---
 

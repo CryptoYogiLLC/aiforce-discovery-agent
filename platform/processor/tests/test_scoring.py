@@ -99,7 +99,10 @@ async def test_legacy_tech_high_effort(scoring):
     legacy_result = await scoring.process(legacy_data)
     modern_result = await scoring.process(modern_data)
 
-    assert legacy_result["scoring"]["effort_score"] >= modern_result["scoring"]["effort_score"]
+    assert (
+        legacy_result["scoring"]["effort_score"]
+        >= modern_result["scoring"]["effort_score"]
+    )
 
 
 @pytest.mark.asyncio
@@ -118,7 +121,10 @@ async def test_many_dependencies_increase_complexity(scoring):
     many_result = await scoring.process(many_deps)
     few_result = await scoring.process(few_deps)
 
-    assert many_result["scoring"]["complexity_score"] > few_result["scoring"]["complexity_score"]
+    assert (
+        many_result["scoring"]["complexity_score"]
+        > few_result["scoring"]["complexity_score"]
+    )
 
 
 @pytest.mark.asyncio
@@ -175,7 +181,11 @@ async def test_overall_score_weighted(scoring):
 
     # Overall should be between min and max of individual scores
     scores = result["scoring"]
-    individual = [scores["complexity_score"], scores["risk_score"], scores["effort_score"]]
+    individual = [
+        scores["complexity_score"],
+        scores["risk_score"],
+        scores["effort_score"],
+    ]
 
     assert min(individual) <= scores["overall_score"] <= max(individual)
 

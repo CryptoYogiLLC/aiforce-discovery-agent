@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. {Most critical pattern}
 > 2. {Second most critical}
 > 3. {Third most critical}
@@ -34,14 +35,17 @@
 ## Overview
 
 ### What This Covers
+
 {Brief description of the category and what patterns are included}
 
 ### When to Reference
+
 - {Scenario 1 when this memory should be checked}
 - {Scenario 2}
 - {Scenario 3}
 
 ### Key Files in Codebase
+
 - `path/to/relevant/file.py`
 - `path/to/component.tsx`
 
@@ -54,6 +58,7 @@
 **Problem**: {What problem does this solve?}
 
 **Solution**:
+
 ```python
 # Code example
 def example():
@@ -73,12 +78,14 @@ def example():
 **Date Fixed**: {YYYY-MM-DD}
 
 **Symptoms**:
+
 - {Symptom 1}
 - {Symptom 2}
 
 **Root Cause**: {What was actually wrong}
 
 **Fix**:
+
 ```python
 # The fix
 ```
@@ -94,11 +101,13 @@ def example():
 **Why it's bad**: {Explanation}
 
 **Wrong**:
+
 ```python
 # Bad code
 ```
 
 **Right**:
+
 ```python
 # Good code
 ```
@@ -124,6 +133,7 @@ def example():
 **Symptoms**: {What you see}
 
 **Diagnosis**:
+
 ```bash
 # Commands to diagnose
 ```
@@ -134,11 +144,11 @@ def example():
 
 ## Related Documentation
 
-| Resource | Location | Purpose |
-|----------|----------|---------|
-| ADR-XXX | `/docs/adr/xxx-name.md` | Architectural decision |
-| Guidelines | `/docs/guidelines/NAME.md` | Detailed guide |
-| CLAUDE.md | `/CLAUDE.md#section` | Agent instructions |
+| Resource   | Location                   | Purpose                |
+| ---------- | -------------------------- | ---------------------- |
+| ADR-XXX    | `/docs/adr/xxx-name.md`    | Architectural decision |
+| Guidelines | `/docs/guidelines/NAME.md` | Detailed guide         |
+| CLAUDE.md  | `/CLAUDE.md#section`       | Agent instructions     |
 
 ---
 
@@ -146,8 +156,8 @@ def example():
 
 This master memory consolidates the following original memories:
 
-| Original Memory | Date | Key Contribution |
-|-----------------|------|------------------|
+| Original Memory   | Date       | Key Contribution      |
+| ----------------- | ---------- | --------------------- |
 | `{memory_name_1}` | 2025-XX-XX | {What it contributed} |
 | `{memory_name_2}` | 2025-XX-XX | {What it contributed} |
 
@@ -155,8 +165,8 @@ This master memory consolidates the following original memories:
 
 ## Changelog
 
-| Date | Change | Author |
-|------|--------|--------|
+| Date   | Change           | Author      |
+| ------ | ---------------- | ----------- |
 | {DATE} | Initial creation | Claude Code |
 
 ---

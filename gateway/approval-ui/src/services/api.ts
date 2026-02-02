@@ -12,7 +12,9 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    const error = await response
+      .json()
+      .catch(() => ({ error: "Unknown error" }));
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 
@@ -33,9 +35,11 @@ export const api = {
     list: (params: ListParams = {}): Promise<PaginatedResult<Discovery>> => {
       const searchParams = new URLSearchParams();
       if (params.page) searchParams.set("page", String(params.page));
-      if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+      if (params.pageSize)
+        searchParams.set("pageSize", String(params.pageSize));
       if (params.status) searchParams.set("status", params.status);
-      if (params.sourceService) searchParams.set("sourceService", params.sourceService);
+      if (params.sourceService)
+        searchParams.set("sourceService", params.sourceService);
       if (params.sortBy) searchParams.set("sortBy", params.sortBy);
       if (params.sortOrder) searchParams.set("sortOrder", params.sortOrder);
 
@@ -53,14 +57,21 @@ export const api = {
       });
     },
 
-    reject: (id: string, reason: string, actor?: string): Promise<Discovery> => {
+    reject: (
+      id: string,
+      reason: string,
+      actor?: string,
+    ): Promise<Discovery> => {
       return fetchJSON(`${API_BASE}/discoveries/${id}/reject`, {
         method: "POST",
         body: JSON.stringify({ reason, actor }),
       });
     },
 
-    batchApprove: (ids: string[], actor?: string): Promise<{ approved: number; total: number }> => {
+    batchApprove: (
+      ids: string[],
+      actor?: string,
+    ): Promise<{ approved: number; total: number }> => {
       return fetchJSON(`${API_BASE}/discoveries/batch/approve`, {
         method: "POST",
         body: JSON.stringify({ ids, actor }),
@@ -69,11 +80,15 @@ export const api = {
   },
 
   audit: {
-    list: (params: { discoveryId?: string; page?: number; pageSize?: number } = {}): Promise<PaginatedResult<AuditLogEntry>> => {
+    list: (
+      params: { discoveryId?: string; page?: number; pageSize?: number } = {},
+    ): Promise<PaginatedResult<AuditLogEntry>> => {
       const searchParams = new URLSearchParams();
       if (params.page) searchParams.set("page", String(params.page));
-      if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
-      if (params.discoveryId) searchParams.set("discoveryId", params.discoveryId);
+      if (params.pageSize)
+        searchParams.set("pageSize", String(params.pageSize));
+      if (params.discoveryId)
+        searchParams.set("discoveryId", params.discoveryId);
 
       return fetchJSON(`${API_BASE}/audit?${searchParams}`);
     },

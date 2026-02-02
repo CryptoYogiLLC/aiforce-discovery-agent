@@ -1,6 +1,5 @@
 """Tests for code metrics calculation."""
 
-import pytest
 from src.analyzers.metrics_calculator import MetricsCalculator
 
 

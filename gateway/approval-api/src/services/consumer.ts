@@ -36,7 +36,7 @@ class Consumer {
       await this.channel.bindQueue(
         config.rabbitmq.queue,
         config.rabbitmq.exchange,
-        "scored.*"
+        "scored.*",
       );
 
       // Start consuming
@@ -55,7 +55,7 @@ class Consumer {
             this.channel?.nack(msg, false, true);
           }
         },
-        { noAck: false }
+        { noAck: false },
       );
 
       this.connected = true;
@@ -90,7 +90,7 @@ class Consumer {
     // Check for duplicate (idempotent handling)
     const existing = await db.query<{ id: string }>(
       "SELECT id FROM gateway.discoveries WHERE id = $1",
-      [event.id]
+      [event.id],
     );
 
     if (existing.length > 0) {
@@ -105,7 +105,7 @@ class Consumer {
     await db.query(
       `INSERT INTO gateway.discoveries (id, event_type, source_service, payload, status, created_at)
        VALUES ($1, $2, $3, $4, 'pending', NOW())`,
-      [event.id, event.type, sourceService, JSON.stringify(event.data)]
+      [event.id, event.type, sourceService, JSON.stringify(event.data)],
     );
 
     // Create audit entry
@@ -116,7 +116,7 @@ class Consumer {
         uuidv4(),
         event.id,
         JSON.stringify({ event_type: event.type, source: event.source }),
-      ]
+      ],
     );
 
     logger.info("Discovery stored", { id: event.id, type: event.type });

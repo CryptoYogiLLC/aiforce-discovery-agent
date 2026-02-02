@@ -18,8 +18,7 @@ export const config = {
   },
   rabbitmq: {
     url:
-      process.env.RABBITMQ_URL ||
-      "amqp://discovery:discovery@localhost:5672/",
+      process.env.RABBITMQ_URL || "amqp://discovery:discovery@localhost:5672/",
     exchange: process.env.RABBITMQ_EXCHANGE || "discovery.events",
     queue: process.env.RABBITMQ_QUEUE || "gateway.discoveries",
   },

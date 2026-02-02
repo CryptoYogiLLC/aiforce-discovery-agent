@@ -69,7 +69,7 @@ router.get(
       // Get total count
       const countResult = await db.query<{ count: string }>(
         `SELECT COUNT(*) as count FROM gateway.audit_log ${whereClause}`,
-        params
+        params,
       );
       const total = parseInt(countResult[0]?.count || "0", 10);
 
@@ -78,7 +78,7 @@ router.get(
         `SELECT * FROM gateway.audit_log ${whereClause}
          ORDER BY created_at DESC
          LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-        [...params, pageSize, offset]
+        [...params, pageSize, offset],
       );
 
       const result: PaginatedAuditResult = {
@@ -94,7 +94,7 @@ router.get(
       logger.error("Failed to list audit log", { error });
       res.status(500).json({ error: "Failed to list audit log" });
     }
-  }
+  },
 );
 
 // GET /api/audit/discovery/:id - Get audit log for specific discovery
@@ -109,7 +109,7 @@ router.get(
         `SELECT * FROM gateway.audit_log
          WHERE discovery_id = $1
          ORDER BY created_at DESC`,
-        [req.params.id]
+        [req.params.id],
       );
 
       res.json(entries);
@@ -120,7 +120,7 @@ router.get(
       });
       res.status(500).json({ error: "Failed to get audit log" });
     }
-  }
+  },
 );
 
 export const auditRoutes = router;

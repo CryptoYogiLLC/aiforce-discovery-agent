@@ -27,22 +27,22 @@ Inspect database schemas, identify relationships, and detect sensitive (PII) dat
 
 ## Events Published
 
-| CloudEvents Type | Routing Key | Description |
-|------------------|-------------|-------------|
-| `discovery.database.discovered` | `discovered.database` | Database instance found |
-| `discovery.schema.discovered` | `discovered.schema` | Table/column information |
-| `discovery.relationship.discovered` | `discovered.relationship` | FK relationships |
+| CloudEvents Type                    | Routing Key               | Description              |
+| ----------------------------------- | ------------------------- | ------------------------ |
+| `discovery.database.discovered`     | `discovered.database`     | Database instance found  |
+| `discovery.schema.discovered`       | `discovered.schema`       | Table/column information |
+| `discovery.relationship.discovered` | `discovered.relationship` | FK relationships         |
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/ready` | Readiness check (includes RabbitMQ status) |
-| GET | `/metrics` | Prometheus metrics |
-| POST | `/api/v1/inspect` | Inspect database with provided credentials |
-| POST | `/api/v1/inspect/postgres` | Inspect PostgreSQL using default config |
-| POST | `/api/v1/inspect/mysql` | Inspect MySQL using default config |
+| Method | Path                       | Description                                |
+| ------ | -------------------------- | ------------------------------------------ |
+| GET    | `/health`                  | Health check                               |
+| GET    | `/ready`                   | Readiness check (includes RabbitMQ status) |
+| GET    | `/metrics`                 | Prometheus metrics                         |
+| POST   | `/api/v1/inspect`          | Inspect database with provided credentials |
+| POST   | `/api/v1/inspect/postgres` | Inspect PostgreSQL using default config    |
+| POST   | `/api/v1/inspect/mysql`    | Inspect MySQL using default config         |
 
 ### Inspect Request Body
 
@@ -112,31 +112,32 @@ Inspect database schemas, identify relationships, and detect sensitive (PII) dat
 
 Environment variables (prefix: `DBINSPECTOR_`):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DBINSPECTOR_SERVER_HOST` | `0.0.0.0` | Server bind host |
-| `DBINSPECTOR_SERVER_PORT` | `8003` | Server port |
-| `DBINSPECTOR_RABBITMQ_URL` | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL |
-| `DBINSPECTOR_RABBITMQ_EXCHANGE` | `discovery.events` | RabbitMQ exchange |
-| `DBINSPECTOR_POSTGRES_HOST` | `localhost` | Default PostgreSQL host |
-| `DBINSPECTOR_POSTGRES_PORT` | `5432` | Default PostgreSQL port |
-| `DBINSPECTOR_POSTGRES_USER` | `postgres` | Default PostgreSQL user |
-| `DBINSPECTOR_POSTGRES_PASSWORD` | `` | Default PostgreSQL password |
-| `DBINSPECTOR_POSTGRES_DATABASE` | `postgres` | Default PostgreSQL database |
-| `DBINSPECTOR_MYSQL_HOST` | `localhost` | Default MySQL host |
-| `DBINSPECTOR_MYSQL_PORT` | `3306` | Default MySQL port |
-| `DBINSPECTOR_MYSQL_USER` | `root` | Default MySQL user |
-| `DBINSPECTOR_MYSQL_PASSWORD` | `` | Default MySQL password |
-| `DBINSPECTOR_MYSQL_DATABASE` | `mysql` | Default MySQL database |
-| `DBINSPECTOR_PII_SAMPLE_SIZE` | `100` | Rows to sample for PII detection |
-| `DBINSPECTOR_PII_DETECTION_ENABLED` | `true` | Enable data sampling for PII |
-| `DBINSPECTOR_LOG_LEVEL` | `INFO` | Logging level |
+| Variable                            | Default                                      | Description                      |
+| ----------------------------------- | -------------------------------------------- | -------------------------------- |
+| `DBINSPECTOR_SERVER_HOST`           | `0.0.0.0`                                    | Server bind host                 |
+| `DBINSPECTOR_SERVER_PORT`           | `8003`                                       | Server port                      |
+| `DBINSPECTOR_RABBITMQ_URL`          | `amqp://discovery:discovery@localhost:5672/` | RabbitMQ URL                     |
+| `DBINSPECTOR_RABBITMQ_EXCHANGE`     | `discovery.events`                           | RabbitMQ exchange                |
+| `DBINSPECTOR_POSTGRES_HOST`         | `localhost`                                  | Default PostgreSQL host          |
+| `DBINSPECTOR_POSTGRES_PORT`         | `5432`                                       | Default PostgreSQL port          |
+| `DBINSPECTOR_POSTGRES_USER`         | `postgres`                                   | Default PostgreSQL user          |
+| `DBINSPECTOR_POSTGRES_PASSWORD`     | ``                                           | Default PostgreSQL password      |
+| `DBINSPECTOR_POSTGRES_DATABASE`     | `postgres`                                   | Default PostgreSQL database      |
+| `DBINSPECTOR_MYSQL_HOST`            | `localhost`                                  | Default MySQL host               |
+| `DBINSPECTOR_MYSQL_PORT`            | `3306`                                       | Default MySQL port               |
+| `DBINSPECTOR_MYSQL_USER`            | `root`                                       | Default MySQL user               |
+| `DBINSPECTOR_MYSQL_PASSWORD`        | ``                                           | Default MySQL password           |
+| `DBINSPECTOR_MYSQL_DATABASE`        | `mysql`                                      | Default MySQL database           |
+| `DBINSPECTOR_PII_SAMPLE_SIZE`       | `100`                                        | Rows to sample for PII detection |
+| `DBINSPECTOR_PII_DETECTION_ENABLED` | `true`                                       | Enable data sampling for PII     |
+| `DBINSPECTOR_LOG_LEVEL`             | `INFO`                                       | Logging level                    |
 
 ## PII Detection
 
 ### Column Name Patterns
 
 Detects potential PII by column names:
+
 - **email**: email, user_email, contact_email, etc.
 - **phone**: phone, mobile, telephone, cell, etc.
 - **ssn**: ssn, social_security, tax_id, national_id, etc.
@@ -151,6 +152,7 @@ Detects potential PII by column names:
 ### Data Pattern Detection
 
 When enabled, samples data from text columns to detect:
+
 - Email addresses (regex pattern)
 - Phone numbers (various formats)
 - SSN patterns (XXX-XX-XXXX)

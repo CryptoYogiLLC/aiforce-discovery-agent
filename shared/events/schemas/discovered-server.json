@@ -3,9 +3,7 @@
   "$id": "https://aiforce-discovery-agent/schemas/discovered-server.json",
   "title": "Server Discovered Event",
   "description": "Event emitted when a server/host is discovered on the network",
-  "allOf": [
-    { "$ref": "cloudevent-base.json" }
-  ],
+  "allOf": [{ "$ref": "cloudevent-base.json" }],
   "properties": {
     "type": {
       "const": "discovery.server.discovered"

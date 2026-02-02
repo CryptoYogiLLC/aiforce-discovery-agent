@@ -9,28 +9,29 @@ Central message broker for event-driven communication between services.
 
 ## Exchanges
 
-| Exchange | Type | Purpose |
-|----------|------|---------|
-| `discovery.events` | fanout | Collectors publish all discovery events here |
-| `processing.events` | topic | Processing pipeline with routing |
-| `gateway.events` | direct | Approved items to transmitter |
-| `discovery.dlx` | direct | Dead letter exchange for failed messages |
+| Exchange            | Type   | Purpose                                      |
+| ------------------- | ------ | -------------------------------------------- |
+| `discovery.events`  | fanout | Collectors publish all discovery events here |
+| `processing.events` | topic  | Processing pipeline with routing             |
+| `gateway.events`    | direct | Approved items to transmitter                |
+| `discovery.dlx`     | direct | Dead letter exchange for failed messages     |
 
 ## Queues
 
-| Queue | Binding | Source |
-|-------|---------|--------|
-| `enrichment.server.queue` | `discovered.server` | processing.events |
+| Queue                         | Binding                 | Source            |
+| ----------------------------- | ----------------------- | ----------------- |
+| `enrichment.server.queue`     | `discovered.server`     | processing.events |
 | `enrichment.repository.queue` | `discovered.repository` | processing.events |
-| `enrichment.database.queue` | `discovered.database` | processing.events |
-| `redactor.queue` | `enriched.*` | processing.events |
-| `scoring.queue` | `redacted.*` | processing.events |
-| `approval.queue` | `scored.*` | processing.events |
-| `transmitter.queue` | `approved.batch` | gateway.events |
+| `enrichment.database.queue`   | `discovered.database`   | processing.events |
+| `redactor.queue`              | `enriched.*`            | processing.events |
+| `scoring.queue`               | `redacted.*`            | processing.events |
+| `approval.queue`              | `scored.*`              | processing.events |
+| `transmitter.queue`           | `approved.batch`        | gateway.events    |
 
 ## Dead Letter Queues
 
 Each processing queue has a corresponding dead letter queue:
+
 - `dlq.enrichment.server`
 - `dlq.enrichment.repository`
 - `dlq.enrichment.database`

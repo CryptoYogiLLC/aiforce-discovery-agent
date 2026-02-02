@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. Docker-first development only
 > 2. NEVER downgrade database versions on existing volumes
 > 3. Always check for docker-compose.override.yml
@@ -23,6 +24,7 @@
 "Works on my machine" syndrome killed productivity in parent project.
 
 ### Wrong
+
 ```bash
 # Local development causes inconsistency
 python -m pytest tests/  # Different Python, different deps
@@ -30,6 +32,7 @@ npm run dev              # Different Node version
 ```
 
 ### Correct
+
 ```bash
 # All development in containers
 docker exec -it discovery-agent-backend bash
@@ -46,20 +49,23 @@ docker-compose exec code-analyzer pytest tests/
 Caused **3 data corruption events** in parent project.
 
 ### The Problem
+
 ```yaml
 # If postgres data exists with version 17:
 postgres:
-  image: postgres:16  # CRASHES: "database files incompatible"
+  image: postgres:16 # CRASHES: "database files incompatible"
 ```
 
 ### Solution
+
 ```yaml
 # Must match or upgrade:
 postgres:
-  image: postgres:17  # Matches existing data
+  image: postgres:17 # Matches existing data
 ```
 
 ### If You Need to Downgrade
+
 ```bash
 # ONLY option: destroy data
 docker-compose down -v  # Removes volumes
@@ -73,6 +79,7 @@ docker-compose up -d    # Fresh start
 Hidden version conflicts caused mysterious failures.
 
 ### Before Any Docker Debugging
+
 ```bash
 # ALWAYS check for override files
 ls -la docker-compose*.yml
@@ -130,12 +137,12 @@ docker-compose exec network-scanner sh
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why Bad | Do Instead |
-|--------------|---------|------------|
-| Local dev without Docker | "Works on my machine" | Docker-first |
-| Downgrading DB version | Data corruption | Match or upgrade only |
-| Ignoring override files | Hidden conflicts | Check ls -la docker* |
-| Single requirements.txt | Deploy mismatch | Dual requirements |
+| Anti-Pattern             | Why Bad               | Do Instead            |
+| ------------------------ | --------------------- | --------------------- |
+| Local dev without Docker | "Works on my machine" | Docker-first          |
+| Downgrading DB version   | Data corruption       | Match or upgrade only |
+| Ignoring override files  | Hidden conflicts      | Check ls -la docker\* |
+| Single requirements.txt  | Deploy mismatch       | Dual requirements     |
 
 ---
 
@@ -145,6 +152,7 @@ docker-compose exec network-scanner sh
 **Context**: Development environment may have multiple projects running.
 
 **Solution**:
+
 ```yaml
 services:
   rabbitmq:
@@ -173,6 +181,7 @@ services:
 **Context**: When mounting definitions.json for exchange/queue setup.
 
 **Solution**: Include user in definitions.json with proper password hash:
+
 ```python
 import hashlib, base64, os
 

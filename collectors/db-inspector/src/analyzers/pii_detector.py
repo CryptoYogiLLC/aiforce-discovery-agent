@@ -96,24 +96,16 @@ class PIIDetector:
 
     # Data patterns for PII detection
     DATA_PATTERNS: dict[str, re.Pattern] = {
-        "email": re.compile(
-            r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        ),
-        "phone": re.compile(
-            r"^[\+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]{7,15}$"
-        ),
-        "ssn": re.compile(
-            r"^\d{3}[-\s]?\d{2}[-\s]?\d{4}$"
-        ),
+        "email": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
+        "phone": re.compile(r"^[\+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]{7,15}$"),
+        "ssn": re.compile(r"^\d{3}[-\s]?\d{2}[-\s]?\d{4}$"),
         "credit_card": re.compile(
             r"^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$"
         ),
         "ip_address": re.compile(
             r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
         ),
-        "zip_code": re.compile(
-            r"^\d{5}(?:[-\s]\d{4})?$"
-        ),
+        "zip_code": re.compile(r"^\d{5}(?:[-\s]\d{4})?$"),
     }
 
     def detect_by_column_name(self, column_name: str) -> List[Tuple[str, float]]:

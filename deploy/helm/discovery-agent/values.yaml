@@ -186,7 +186,7 @@ rabbitmq:
   enabled: true
   auth:
     username: discovery
-    password: ""  # Set via --set or secrets
+    password: "" # Set via --set or secrets
   persistence:
     enabled: true
     size: 8Gi
@@ -195,7 +195,7 @@ postgresql:
   enabled: true
   auth:
     username: discovery
-    password: ""  # Set via --set or secrets
+    password: "" # Set via --set or secrets
     database: discovery_agent
   primary:
     persistence:

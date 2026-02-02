@@ -26,12 +26,14 @@ Web-based user interface for reviewing and approving discovery events before tra
 ## Pages
 
 ### Discovery List (`/`)
+
 - Paginated table of all discoveries
 - Filter by status (pending, approved, rejected)
 - Checkbox selection for bulk operations
 - Quick view link to detail page
 
 ### Discovery Detail (`/discovery/:id`)
+
 - Full discovery metadata
 - JSON payload viewer
 - Approve/Reject buttons (for pending items)
@@ -41,9 +43,9 @@ Web-based user interface for reviewing and approving discovery events before tra
 
 The UI proxies API requests to the backend during development:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_API_URL` | `/api` | API base URL (proxied to backend) |
+| Variable       | Default | Description                       |
+| -------------- | ------- | --------------------------------- |
+| `VITE_API_URL` | `/api`  | API base URL (proxied to backend) |
 
 In production (nginx), API requests are proxied to `approval-api:3001`.
 
@@ -75,6 +77,7 @@ docker run -p 80:80 approval-ui
 ```
 
 The production image uses nginx to:
+
 - Serve static files
 - Proxy `/api` requests to the backend
 - Handle SPA routing
@@ -116,19 +119,25 @@ gateway/approval-ui/
 ## UI Components
 
 ### StatusBadge
+
 Displays discovery status with appropriate styling:
+
 - Pending: Yellow badge
 - Approved: Green badge
 - Rejected: Red badge
 
 ### Pagination
+
 Navigation component for paginated lists with:
+
 - Previous/Next buttons
 - Page number links
 - Ellipsis for large page counts
 
 ### RejectModal
+
 Modal dialog for rejection workflow:
+
 - Required reason textarea
 - Confirm/Cancel buttons
 - Loading state handling

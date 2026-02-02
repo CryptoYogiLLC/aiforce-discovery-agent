@@ -3,6 +3,7 @@
 ## The Challenge
 
 The Discovery Agent is designed to run in **client environments** where it scans:
+
 - Network subnets for servers
 - Databases for schema information
 - Code repositories for dependencies
@@ -85,6 +86,7 @@ open http://localhost:15672  # admin/discovery
 ## Testing Levels
 
 ### Unit Tests
+
 - Test individual functions
 - Mock external dependencies
 - Run in CI without Docker
@@ -96,6 +98,7 @@ make test-db-inspector
 ```
 
 ### Integration Tests
+
 - Test with simulated network
 - Requires `docker-compose.dev.yml`
 - Run locally or in CI with Docker
@@ -109,6 +112,7 @@ make test-integration
 ```
 
 ### End-to-End Tests
+
 - Full pipeline from discovery to approval UI
 - Requires all services running
 
@@ -124,6 +128,7 @@ make test-e2e
 ## CI/CD Testing
 
 GitHub Actions runs tests in this order:
+
 1. **Unit tests** - No Docker required
 2. **Lint/Format** - Code quality
 3. **Build** - Compile all services
@@ -133,22 +138,24 @@ GitHub Actions runs tests in this order:
 
 For local development with simulated network:
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| RAM | 8 GB | 16 GB |
-| Disk | 10 GB free | 20 GB free |
-| CPU | 4 cores | 8 cores |
+| Resource | Minimum    | Recommended |
+| -------- | ---------- | ----------- |
+| RAM      | 8 GB       | 16 GB       |
+| Disk     | 10 GB free | 20 GB free  |
+| CPU      | 4 cores    | 8 cores     |
 
 ## Production Testing
 
 Before deploying to a real client:
 
 1. **Staging Environment**
+
    - Deploy to isolated network segment
    - Use non-production servers
    - Verify no false positives
 
 2. **Pilot Run**
+
    - Start with small subnet
    - Manual approval for all data
    - Review everything before transmission

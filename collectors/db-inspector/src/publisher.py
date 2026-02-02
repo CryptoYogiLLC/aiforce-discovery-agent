@@ -66,7 +66,9 @@ class EventPublisher:
             "data": data,
         }
 
-    async def _publish(self, event_type: str, routing_key: str, data: dict[str, Any]) -> None:
+    async def _publish(
+        self, event_type: str, routing_key: str, data: dict[str, Any]
+    ) -> None:
         """Publish a CloudEvent to RabbitMQ."""
         if not self.is_connected or not self.exchange:
             logger.warning("Not connected to RabbitMQ, skipping publish")

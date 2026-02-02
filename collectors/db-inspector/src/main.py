@@ -38,7 +38,9 @@ async def lifespan(app: FastAPI):
         await publisher.connect()
         logger.info("Connected to RabbitMQ")
     except Exception as e:
-        logger.warning(f"Failed to connect to RabbitMQ: {e}. Running without publishing.")
+        logger.warning(
+            f"Failed to connect to RabbitMQ: {e}. Running without publishing."
+        )
         publisher = None
 
     yield
@@ -103,7 +105,9 @@ async def health_check() -> HealthResponse:
 @app.get("/ready", response_model=ReadyResponse)
 async def readiness_check() -> ReadyResponse:
     """Readiness check endpoint."""
-    rabbitmq_status = "connected" if publisher and publisher.is_connected else "disconnected"
+    rabbitmq_status = (
+        "connected" if publisher and publisher.is_connected else "disconnected"
+    )
     return ReadyResponse(
         status="ready",
         service="db-inspector",
@@ -122,7 +126,9 @@ async def metrics():
 @app.post("/api/v1/inspect", response_model=InspectionResponse)
 async def inspect_database(request: DatabaseConnectionRequest) -> InspectionResponse:
     """Inspect a database and extract schema information."""
-    logger.info(f"Inspecting {request.db_type} database at {request.host}:{request.port}")
+    logger.info(
+        f"Inspecting {request.db_type} database at {request.host}:{request.port}"
+    )
 
     try:
         if request.db_type.lower() == "postgres":

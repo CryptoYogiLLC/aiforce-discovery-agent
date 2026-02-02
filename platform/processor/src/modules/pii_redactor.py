@@ -149,9 +149,7 @@ class PIIRedactorModule:
         result = text
 
         # Always redact highly sensitive data
-        result = self.PATTERNS["ssn"].sub(
-            self.REDACTION_PLACEHOLDERS["ssn"], result
-        )
+        result = self.PATTERNS["ssn"].sub(self.REDACTION_PLACEHOLDERS["ssn"], result)
         result = self.PATTERNS["credit_card"].sub(
             self.REDACTION_PLACEHOLDERS["credit_card"], result
         )

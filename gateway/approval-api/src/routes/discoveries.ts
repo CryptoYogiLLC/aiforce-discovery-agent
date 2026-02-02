@@ -52,7 +52,7 @@ router.get(
       logger.error("Failed to list discoveries", { error });
       res.status(500).json({ error: "Failed to list discoveries" });
     }
-  }
+  },
 );
 
 // GET /api/discoveries/:id - Get single discovery
@@ -72,7 +72,7 @@ router.get(
       logger.error("Failed to get discovery", { error, id: req.params.id });
       res.status(500).json({ error: "Failed to get discovery" });
     }
-  }
+  },
 );
 
 // POST /api/discoveries/:id/approve - Approve single discovery
@@ -98,7 +98,7 @@ router.post(
       logger.error("Failed to approve discovery", { error, id: req.params.id });
       res.status(500).json({ error: "Failed to approve discovery" });
     }
-  }
+  },
 );
 
 // POST /api/discoveries/:id/reject - Reject single discovery
@@ -106,7 +106,10 @@ router.post(
   "/:id/reject",
   [
     param("id").isUUID(),
-    body("reason").isString().notEmpty().withMessage("Rejection reason required"),
+    body("reason")
+      .isString()
+      .notEmpty()
+      .withMessage("Rejection reason required"),
     body("actor").optional().isString(),
   ],
   async (req: Request, res: Response) => {
@@ -117,7 +120,7 @@ router.post(
       const discovery = await discoveryService.reject(
         req.params.id,
         actor,
-        req.body.reason
+        req.body.reason,
       );
 
       if (!discovery) {
@@ -132,7 +135,7 @@ router.post(
       logger.error("Failed to reject discovery", { error, id: req.params.id });
       res.status(500).json({ error: "Failed to reject discovery" });
     }
-  }
+  },
 );
 
 // POST /api/discoveries/batch/approve - Bulk approve
@@ -159,7 +162,7 @@ router.post(
       logger.error("Failed to batch approve discoveries", { error });
       res.status(500).json({ error: "Failed to batch approve discoveries" });
     }
-  }
+  },
 );
 
 export const discoveryRoutes = router;

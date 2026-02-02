@@ -188,9 +188,7 @@ class ScoringModule:
             return min(10, max(1, round(sum(risk_factors) / len(risk_factors))))
         return 5  # Default medium risk
 
-    def _calculate_effort(
-        self, data: dict[str, Any], complexity: int
-    ) -> int:
+    def _calculate_effort(self, data: dict[str, Any], complexity: int) -> int:
         """Calculate effort score (1-10).
 
         Effort is a function of complexity and other factors.
@@ -231,9 +229,7 @@ class ScoringModule:
             return min(10, max(1, round(sum(effort_factors) / len(effort_factors))))
         return 5  # Default medium effort
 
-    def _calculate_overall(
-        self, complexity: int, risk: int, effort: int
-    ) -> int:
+    def _calculate_overall(self, complexity: int, risk: int, effort: int) -> int:
         """Calculate overall priority score.
 
         Weighted average of complexity, risk, and effort.

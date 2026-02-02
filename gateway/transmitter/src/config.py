@@ -49,15 +49,11 @@ class Settings(BaseSettings):
 
     # Batch processing
     batch_size: int = Field(default=100, description="Maximum batch size")
-    batch_interval_s: int = Field(
-        default=60, description="Batch interval in seconds"
-    )
+    batch_interval_s: int = Field(default=60, description="Batch interval in seconds")
 
     # Retry settings
     retry_max_attempts: int = Field(default=3, description="Max retry attempts")
-    retry_backoff_multiplier: int = Field(
-        default=2, description="Backoff multiplier"
-    )
+    retry_backoff_multiplier: int = Field(default=2, description="Backoff multiplier")
     retry_max_delay_s: int = Field(
         default=300, description="Max retry delay in seconds"
     )

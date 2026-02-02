@@ -1,6 +1,5 @@
 """Tests for language detection."""
 
-import pytest
 from src.analyzers.language_detector import LanguageDetector
 
 

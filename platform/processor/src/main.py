@@ -186,7 +186,9 @@ async def readiness_check() -> JSONResponse:
     Returns whether the service is ready to accept traffic.
     """
     # Check RabbitMQ connection
-    rabbitmq_ready = consumer._connection is not None and not consumer._connection.is_closed
+    rabbitmq_ready = (
+        consumer._connection is not None and not consumer._connection.is_closed
+    )
 
     if not rabbitmq_ready:
         return JSONResponse(

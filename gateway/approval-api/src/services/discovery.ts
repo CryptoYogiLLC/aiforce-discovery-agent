@@ -75,7 +75,7 @@ class DiscoveryService {
     // Get total count
     const countResult = await db.query<{ count: string }>(
       `SELECT COUNT(*) as count FROM gateway.discoveries ${whereClause}`,
-      params
+      params,
     );
     const total = parseInt(countResult[0]?.count || "0", 10);
 
@@ -84,7 +84,7 @@ class DiscoveryService {
       `SELECT * FROM gateway.discoveries ${whereClause}
        ORDER BY ${safeSort} ${safeOrder}
        LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
-      [...params, pageSize, offset]
+      [...params, pageSize, offset],
     );
 
     return {
@@ -99,7 +99,7 @@ class DiscoveryService {
   async getById(id: string): Promise<Discovery | null> {
     const result = await db.query<Discovery>(
       "SELECT * FROM gateway.discoveries WHERE id = $1",
-      [id]
+      [id],
     );
     return result[0] || null;
   }
@@ -109,21 +109,23 @@ class DiscoveryService {
     if (!discovery) return null;
 
     if (discovery.status !== "pending") {
-      throw new Error(`Cannot approve discovery with status: ${discovery.status}`);
+      throw new Error(
+        `Cannot approve discovery with status: ${discovery.status}`,
+      );
     }
 
     await db.query(
       `UPDATE gateway.discoveries
        SET status = 'approved', reviewed_by = $2, reviewed_at = NOW(), updated_at = NOW()
        WHERE id = $1`,
-      [id, actor]
+      [id, actor],
     );
 
     // Create audit entry
     await db.query(
       `INSERT INTO gateway.audit_log (id, discovery_id, action, actor, created_at)
        VALUES ($1, $2, 'approved', $3, NOW())`,
-      [uuidv4(), id, actor]
+      [uuidv4(), id, actor],
     );
 
     logger.info("Discovery approved", { id, actor });
@@ -133,13 +135,15 @@ class DiscoveryService {
   async reject(
     id: string,
     actor: string,
-    reason: string
+    reason: string,
   ): Promise<Discovery | null> {
     const discovery = await this.getById(id);
     if (!discovery) return null;
 
     if (discovery.status !== "pending") {
-      throw new Error(`Cannot reject discovery with status: ${discovery.status}`);
+      throw new Error(
+        `Cannot reject discovery with status: ${discovery.status}`,
+      );
     }
 
     await db.query(
@@ -147,14 +151,14 @@ class DiscoveryService {
        SET status = 'rejected', reviewed_by = $2, reviewed_at = NOW(),
            rejection_reason = $3, updated_at = NOW()
        WHERE id = $1`,
-      [id, actor, reason]
+      [id, actor, reason],
     );
 
     // Create audit entry
     await db.query(
       `INSERT INTO gateway.audit_log (id, discovery_id, action, actor, details, created_at)
        VALUES ($1, $2, 'rejected', $3, $4, NOW())`,
-      [uuidv4(), id, actor, JSON.stringify({ reason })]
+      [uuidv4(), id, actor, JSON.stringify({ reason })],
     );
 
     logger.info("Discovery rejected", { id, actor, reason });

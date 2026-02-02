@@ -3,9 +3,7 @@
   "$id": "https://aiforce-discovery-agent/schemas/discovered-database.json",
   "title": "Database Discovered Event",
   "description": "Event emitted when a database instance is analyzed",
-  "allOf": [
-    { "$ref": "cloudevent-base.json" }
-  ],
+  "allOf": [{ "$ref": "cloudevent-base.json" }],
   "properties": {
     "type": {
       "const": "discovery.database.discovered"
@@ -19,7 +17,17 @@
       "properties": {
         "db_type": {
           "type": "string",
-          "enum": ["postgresql", "mysql", "mariadb", "oracle", "sqlserver", "mongodb", "redis", "elasticsearch", "other"]
+          "enum": [
+            "postgresql",
+            "mysql",
+            "mariadb",
+            "oracle",
+            "sqlserver",
+            "mongodb",
+            "redis",
+            "elasticsearch",
+            "other"
+          ]
         },
         "host": {
           "type": "string",

@@ -10,6 +10,7 @@
 ## Quick Reference
 
 > **Top 5 patterns to know:**
+>
 > 1. NEVER nest database transactions
 > 2. Idempotent migrations - check before create
 > 3. Multi-tenant scoping on EVERY query
@@ -23,6 +24,7 @@
 Fixed **10+ times** in parent project. Causes "transaction already begun" errors.
 
 ### Wrong
+
 ```python
 async def execute_operation(self, db_session: AsyncSession):
     async with db_session.begin():  # ERROR if caller already started tx
@@ -31,6 +33,7 @@ async def execute_operation(self, db_session: AsyncSession):
 ```
 
 ### Correct
+
 ```python
 async def execute_operation(self, db_session: AsyncSession):
     result = await db_session.execute(stmt)
@@ -40,6 +43,7 @@ async def execute_operation(self, db_session: AsyncSession):
 ```
 
 ### Caller Pattern
+
 ```python
 async def orchestrator():
     async with db_session.begin():
@@ -77,6 +81,7 @@ def upgrade():
 Security violation fixed multiple times. ALL queries must include tenant filters.
 
 ### Wrong - Data Leakage
+
 ```python
 async def get_items(self):
     stmt = select(Item)  # Returns ALL tenants' data!
@@ -84,6 +89,7 @@ async def get_items(self):
 ```
 
 ### Correct
+
 ```python
 async def get_items(self, client_account_id: UUID, engagement_id: UUID):
     stmt = select(Item).where(
@@ -112,12 +118,12 @@ async def create_parent_and_child(self, db_session: AsyncSession):
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why Bad | Do Instead |
-|--------------|---------|------------|
-| `async with db.begin()` in helpers | Nested tx error | Let caller manage |
-| `op.create_table()` without check | Migration fails on re-run | Check with inspector |
-| Query without tenant filter | Data leakage | Always include tenant ID |
-| Commit in helper function | Can't roll back orchestration | Commit in caller only |
+| Anti-Pattern                       | Why Bad                       | Do Instead               |
+| ---------------------------------- | ----------------------------- | ------------------------ |
+| `async with db.begin()` in helpers | Nested tx error               | Let caller manage        |
+| `op.create_table()` without check  | Migration fails on re-run     | Check with inspector     |
+| Query without tenant filter        | Data leakage                  | Always include tenant ID |
+| Commit in helper function          | Can't roll back orchestration | Commit in caller only    |
 
 ---
 

@@ -1,6 +1,7 @@
 # Unified Processor Service
 
 The unified processor handles all event processing for the AIForce Discovery Agent:
+
 - **Enrichment**: Adds context and metadata to discovered items
 - **PII Redaction**: Removes sensitive information before data leaves the environment
 - **Scoring**: Calculates complexity and effort scores for migration planning
@@ -29,36 +30,38 @@ docker-compose --profile processor up -d
 
 Environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RABBITMQ_URL` | `amqp://discovery:discovery@rabbitmq:5672/` | RabbitMQ connection URL |
-| `POSTGRES_URL` | `postgresql+asyncpg://...` | PostgreSQL connection URL |
-| `REDIS_URL` | `redis://redis:6379` | Redis connection URL |
-| `LOG_LEVEL` | `info` | Logging level |
-| `ENRICHMENT_ENABLED` | `true` | Enable enrichment stage |
-| `PII_REDACTION_ENABLED` | `true` | Enable PII redaction |
-| `SCORING_ENABLED` | `true` | Enable scoring stage |
-| `PII_REDACT_EMAILS` | `true` | Redact email addresses |
-| `PII_REDACT_IPS` | `true` | Redact IP addresses |
-| `PII_REDACT_HOSTNAMES` | `false` | Redact hostnames |
-| `PII_REDACT_USERNAMES` | `true` | Redact usernames in paths |
+| Variable                | Default                                     | Description               |
+| ----------------------- | ------------------------------------------- | ------------------------- |
+| `RABBITMQ_URL`          | `amqp://discovery:discovery@rabbitmq:5672/` | RabbitMQ connection URL   |
+| `POSTGRES_URL`          | `postgresql+asyncpg://...`                  | PostgreSQL connection URL |
+| `REDIS_URL`             | `redis://redis:6379`                        | Redis connection URL      |
+| `LOG_LEVEL`             | `info`                                      | Logging level             |
+| `ENRICHMENT_ENABLED`    | `true`                                      | Enable enrichment stage   |
+| `PII_REDACTION_ENABLED` | `true`                                      | Enable PII redaction      |
+| `SCORING_ENABLED`       | `true`                                      | Enable scoring stage      |
+| `PII_REDACT_EMAILS`     | `true`                                      | Redact email addresses    |
+| `PII_REDACT_IPS`        | `true`                                      | Redact IP addresses       |
+| `PII_REDACT_HOSTNAMES`  | `false`                                     | Redact hostnames          |
+| `PII_REDACT_USERNAMES`  | `true`                                      | Redact usernames in paths |
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check for probes |
-| `/ready` | GET | Readiness check (RabbitMQ connection) |
-| `/config` | GET | Current configuration (non-sensitive) |
+| Endpoint  | Method | Description                           |
+| --------- | ------ | ------------------------------------- |
+| `/health` | GET    | Health check for probes               |
+| `/ready`  | GET    | Readiness check (RabbitMQ connection) |
+| `/config` | GET    | Current configuration (non-sensitive) |
 
 ## Event Flow
 
 ### Input Events (Consumed)
+
 - `discovered.server` - Server/host discovered on network
 - `discovered.database` - Database instance found
 - `discovered.repository` - Code repository analyzed
 
 ### Output Events (Published)
+
 - `scored.server` - Server with scores
 - `scored.database` - Database with scores
 - `scored.repository` - Repository with scores
@@ -68,6 +71,7 @@ Environment variables:
 ### Enrichment Module
 
 Adds contextual information:
+
 - Environment classification (prod/staging/dev)
 - Technology stack identification
 - OS family classification
@@ -76,6 +80,7 @@ Adds contextual information:
 ### PII Redactor Module
 
 Detects and redacts:
+
 - Email addresses
 - IP addresses (v4 and v6)
 - SSN and credit card numbers
@@ -85,6 +90,7 @@ Detects and redacts:
 ### Scoring Module
 
 Calculates:
+
 - **Complexity Score** (1-10): Technology complexity
 - **Risk Score** (1-10): Migration risk based on environment and data sensitivity
 - **Effort Score** (1-10): Estimated migration effort

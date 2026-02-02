@@ -232,7 +232,8 @@ class DependencyExtractor:
                             "version": version.text if version is not None else "*",
                             "package_manager": "maven",
                             "language": "Java",
-                            "dev_dependency": scope is not None and scope.text == "test",
+                            "dev_dependency": scope is not None
+                            and scope.text == "test",
                             "source_file": "pom.xml",
                         }
                     )
@@ -278,7 +279,9 @@ class DependencyExtractor:
                 for line in f:
                     line = line.strip()
 
-                    if line.startswith("group :development") or line.startswith("group :test"):
+                    if line.startswith("group :development") or line.startswith(
+                        "group :test"
+                    ):
                         in_dev_group = True
                         continue
                     if line == "end":
@@ -286,7 +289,9 @@ class DependencyExtractor:
                         continue
 
                     # Match gem declarations
-                    match = re.match(r"gem\s+['\"]([^'\"]+)['\"](?:,\s*['\"]([^'\"]+)['\"])?", line)
+                    match = re.match(
+                        r"gem\s+['\"]([^'\"]+)['\"](?:,\s*['\"]([^'\"]+)['\"])?", line
+                    )
                     if match:
                         dependencies.append(
                             {

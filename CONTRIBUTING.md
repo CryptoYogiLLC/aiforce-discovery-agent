@@ -46,6 +46,7 @@ Before contributing, please familiarize yourself with:
 Before creating bug reports, please check existing issues to avoid duplicates.
 
 **When reporting a bug, include:**
+
 - Your environment (OS, Docker version, etc.)
 - Steps to reproduce
 - Expected vs actual behavior
@@ -54,6 +55,7 @@ Before creating bug reports, please check existing issues to avoid duplicates.
 ### Suggesting Features
 
 Feature suggestions are welcome! Please:
+
 1. Check if it's already been suggested
 2. Open a Discussion first for major features
 3. Explain the use case and benefit
@@ -70,6 +72,7 @@ Feature suggestions are welcome! Please:
 ### Contributing Documentation
 
 Documentation improvements are highly valued! This includes:
+
 - Fixing typos or unclear explanations
 - Adding examples
 - Improving tutorials
@@ -174,6 +177,7 @@ aiforce-discovery-agent/
 ### Service Ownership
 
 Each service should be self-contained:
+
 - Own Dockerfile
 - Own README with service-specific docs
 - Own tests
@@ -313,18 +317,22 @@ refactor(enrichment): extract correlation logic to separate module
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 Describe testing performed
 
 ## Checklist
+
 - [ ] Tests pass locally
 - [ ] Linting passes
 - [ ] Documentation updated

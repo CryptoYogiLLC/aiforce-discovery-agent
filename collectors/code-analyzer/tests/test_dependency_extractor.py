@@ -1,6 +1,5 @@
 """Tests for dependency extraction."""
 
-import pytest
 from src.analyzers.dependency_extractor import DependencyExtractor
 
 
@@ -81,4 +80,12 @@ class TestDependencyExtractor:
 
         for dep in result:
             assert "language" in dep
-            assert dep["language"] in ["JavaScript", "Python", "Go", "Java", "Ruby", "Rust", "PHP"]
+            assert dep["language"] in [
+                "JavaScript",
+                "Python",
+                "Go",
+                "Java",
+                "Ruby",
+                "Rust",
+                "PHP",
+            ]

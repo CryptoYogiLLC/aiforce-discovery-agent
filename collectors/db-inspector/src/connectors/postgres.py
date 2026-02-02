@@ -32,7 +32,9 @@ class PostgresConnector(BaseConnector):
 
     async def connect(self) -> None:
         """Establish database connection pool."""
-        logger.info(f"Connecting to PostgreSQL at {self.host}:{self.port}/{self.database}")
+        logger.info(
+            f"Connecting to PostgreSQL at {self.host}:{self.port}/{self.database}"
+        )
         self.pool = await asyncpg.create_pool(
             host=self.host,
             port=self.port,
@@ -80,13 +82,15 @@ class PostgresConnector(BaseConnector):
                 # Get indexes for this table
                 indexes = await self._get_indexes(conn, schema, name)
 
-                tables.append({
-                    "name": name,
-                    "schema": schema,
-                    "columns": columns,
-                    "indexes": indexes,
-                    "row_count_estimate": table_row["row_estimate"] or 0,
-                })
+                tables.append(
+                    {
+                        "name": name,
+                        "schema": schema,
+                        "columns": columns,
+                        "indexes": indexes,
+                        "row_count_estimate": table_row["row_estimate"] or 0,
+                    }
+                )
 
         return tables
 
@@ -94,7 +98,8 @@ class PostgresConnector(BaseConnector):
         self, conn: asyncpg.Connection, schema: str, table: str
     ) -> list[dict[str, Any]]:
         """Get columns for a specific table."""
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT
                 c.column_name,
                 c.data_type,
@@ -114,7 +119,10 @@ class PostgresConnector(BaseConnector):
             FROM information_schema.columns c
             WHERE c.table_schema = $1 AND c.table_name = $2
             ORDER BY c.ordinal_position
-        """, schema, table)
+        """,
+            schema,
+            table,
+        )
 
         return [
             {
@@ -131,7 +139,8 @@ class PostgresConnector(BaseConnector):
         self, conn: asyncpg.Connection, schema: str, table: str
     ) -> list[dict[str, Any]]:
         """Get indexes for a specific table."""
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT
                 i.relname AS index_name,
                 am.amname AS index_type,
@@ -145,7 +154,10 @@ class PostgresConnector(BaseConnector):
             JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
             WHERE n.nspname = $1 AND t.relname = $2
             GROUP BY i.relname, am.amname, ix.indisunique
-        """, schema, table)
+        """,
+            schema,
+            table,
+        )
 
         return [
             {
@@ -184,13 +196,15 @@ class PostgresConnector(BaseConnector):
             """)
 
             for row in rows:
-                relationships.append({
-                    "name": row["constraint_name"],
-                    "source_table": f"{row['source_schema']}.{row['source_table']}",
-                    "source_column": row["source_column"],
-                    "target_table": f"{row['target_schema']}.{row['target_table']}",
-                    "target_column": row["target_column"],
-                })
+                relationships.append(
+                    {
+                        "name": row["constraint_name"],
+                        "source_table": f"{row['source_schema']}.{row['source_table']}",
+                        "source_column": row["source_column"],
+                        "target_table": f"{row['target_schema']}.{row['target_table']}",
+                        "target_column": row["target_column"],
+                    }
+                )
 
         return relationships
 
@@ -209,24 +223,30 @@ class PostgresConnector(BaseConnector):
                 # Column name-based detection (always runs)
                 name_findings = self.pii_detector.detect_by_column_name(column["name"])
                 for pii_type, confidence in name_findings:
-                    findings.append({
-                        "table": f"{table['schema']}.{table['name']}",
-                        "column": column["name"],
-                        "pii_type": pii_type,
-                        "confidence": confidence,
-                        "detection_method": "column_name",
-                    })
+                    findings.append(
+                        {
+                            "table": f"{table['schema']}.{table['name']}",
+                            "column": column["name"],
+                            "pii_type": pii_type,
+                            "confidence": confidence,
+                            "detection_method": "column_name",
+                        }
+                    )
 
                 # Data sampling-based detection (optional)
                 if enabled and column["data_type"] in (
-                    "character varying", "varchar", "text", "char", "character"
+                    "character varying",
+                    "varchar",
+                    "text",
+                    "char",
+                    "character",
                 ):
                     async with self.pool.acquire() as conn:
                         try:
                             samples = await conn.fetch(f"""
-                                SELECT "{column['name']}"
-                                FROM "{table['schema']}"."{table['name']}"
-                                WHERE "{column['name']}" IS NOT NULL
+                                SELECT "{column["name"]}"
+                                FROM "{table["schema"]}"."{table["name"]}"
+                                WHERE "{column["name"]}" IS NOT NULL
                                 LIMIT {sample_size}
                             """)
                             values = [str(row[0]) for row in samples if row[0]]
@@ -240,13 +260,15 @@ class PostgresConnector(BaseConnector):
                                     for f in findings
                                 )
                                 if not existing:
-                                    findings.append({
-                                        "table": f"{table['schema']}.{table['name']}",
-                                        "column": column["name"],
-                                        "pii_type": pii_type,
-                                        "confidence": confidence,
-                                        "detection_method": "data_pattern",
-                                    })
+                                    findings.append(
+                                        {
+                                            "table": f"{table['schema']}.{table['name']}",
+                                            "column": column["name"],
+                                            "pii_type": pii_type,
+                                            "confidence": confidence,
+                                            "detection_method": "data_pattern",
+                                        }
+                                    )
                         except Exception as e:
                             logger.warning(
                                 f"Failed to sample {table['schema']}.{table['name']}.{column['name']}: {e}"

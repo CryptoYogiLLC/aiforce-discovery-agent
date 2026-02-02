@@ -40,11 +40,11 @@ app.use(
     err: Error,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    _next: express.NextFunction,
   ) => {
     logger.error("Unhandled error", { error: err.message, stack: err.stack });
     res.status(500).json({ error: "Internal server error" });
-  }
+  },
 );
 
 // Startup
@@ -65,7 +65,7 @@ async function start() {
     // Start HTTP server
     app.listen(config.server.port, config.server.host, () => {
       logger.info(
-        `Approval API listening on ${config.server.host}:${config.server.port}`
+        `Approval API listening on ${config.server.host}:${config.server.port}`,
       );
     });
   } catch (error) {

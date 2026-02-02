@@ -19,6 +19,7 @@ When organizations modernize their application portfolios, they need visibility 
 - **What's the business context?** (criticality, ownership, compliance requirements)
 
 Existing tools (Device42, Cloudamize, AWS ADS) excel at infrastructure discovery but don't provide:
+
 - Business context for modernization decisions
 - Direct integration with assessment/planning tools
 - Client-controlled data sovereignty
@@ -31,12 +32,14 @@ Existing tools (Device42, Cloudamize, AWS ADS) excel at infrastructure discovery
 ## Key Features
 
 ### Functional
+
 - **Network Discovery**: Scan subnets, identify services, map network topology
 - **Code Analysis**: Analyze repositories for complexity, dependencies, tech stack
 - **Database Inspection**: Extract schemas, identify relationships, detect PII
 - **Dependency Mapping**: Trace API calls, database connections, service meshes
 
 ### Security & Control
+
 - **Runs in YOUR environment**: Nothing leaves your network without approval
 - **Outbound-only communication**: No inbound ports required
 - **Approval workflow**: Human reviews all data before transmission
@@ -44,6 +47,7 @@ Existing tools (Device42, Cloudamize, AWS ADS) excel at infrastructure discovery
 - **Configurable scope**: Include/exclude subnets, servers, applications
 
 ### Educational
+
 - **Microservices reference implementation**: Learn patterns by studying real code
 - **Event-driven architecture**: See how services communicate via message queues
 - **Polyglot design**: Go for performance, Python for analysis, React for UI
@@ -97,6 +101,7 @@ Existing tools (Device42, Cloudamize, AWS ADS) excel at infrastructure discovery
 ## Quick Start
 
 ### Prerequisites
+
 - Docker & Docker Compose
 - 4GB RAM minimum
 - Network access to systems you want to discover
@@ -140,7 +145,7 @@ collection:
   include_subnets:
     - 10.0.0.0/8
   exclude_subnets:
-    - 10.0.99.0/24      # Sensitive zone
+    - 10.0.99.0/24 # Sensitive zone
   exclude_servers:
     - "*-pci-*"
 
@@ -153,7 +158,7 @@ data_handling:
     - "SSN-\\d{3}-\\d{2}-\\d{4}"
 
 transmission:
-  mode: approval_required  # auto | preview_only | approval_required
+  mode: approval_required # auto | preview_only | approval_required
   destination: https://your-assess-instance.com/api/v1/discovery
 ```
 
@@ -163,16 +168,16 @@ See [Configuration Guide](docs/configuration.md) for full options.
 
 ## Microservices Components
 
-| Service | Language | Purpose | Status |
-|---------|----------|---------|--------|
-| [Network Scanner](collectors/network-scanner/) | Go | Discover servers, ports, services | 🚧 In Progress |
-| [Code Analyzer](collectors/code-analyzer/) | Python | Analyze repos, detect dependencies | 🚧 In Progress |
-| [Database Inspector](collectors/db-inspector/) | Python | Extract schemas, classify data | 🚧 In Progress |
-| [Event Bus](platform/event-bus/) | RabbitMQ | Message routing between services | 🚧 In Progress |
-| [Enrichment Service](platform/enrichment/) | Python | Correlate and enrich discoveries | 🚧 In Progress |
-| [PII Redactor](platform/pii-redactor/) | Python | Detect and mask sensitive data | 🚧 In Progress |
-| [Approval Gateway](gateway/approval-ui/) | React | Web UI for review and approval | 🚧 In Progress |
-| [Transmitter](gateway/transmitter/) | Python | Secure external transmission | 🚧 In Progress |
+| Service                                        | Language | Purpose                            | Status         |
+| ---------------------------------------------- | -------- | ---------------------------------- | -------------- |
+| [Network Scanner](collectors/network-scanner/) | Go       | Discover servers, ports, services  | 🚧 In Progress |
+| [Code Analyzer](collectors/code-analyzer/)     | Python   | Analyze repos, detect dependencies | 🚧 In Progress |
+| [Database Inspector](collectors/db-inspector/) | Python   | Extract schemas, classify data     | 🚧 In Progress |
+| [Event Bus](platform/event-bus/)               | RabbitMQ | Message routing between services   | 🚧 In Progress |
+| [Enrichment Service](platform/enrichment/)     | Python   | Correlate and enrich discoveries   | 🚧 In Progress |
+| [PII Redactor](platform/pii-redactor/)         | Python   | Detect and mask sensitive data     | 🚧 In Progress |
+| [Approval Gateway](gateway/approval-ui/)       | React    | Web UI for review and approval     | 🚧 In Progress |
+| [Transmitter](gateway/transmitter/)            | Python   | Secure external transmission       | 🚧 In Progress |
 
 ---
 
@@ -180,15 +185,15 @@ See [Configuration Guide](docs/configuration.md) for full options.
 
 This project serves as a **reference implementation** of microservices patterns:
 
-| Pattern | Implementation |
-|---------|----------------|
-| **Event-driven architecture** | Services communicate via RabbitMQ events |
-| **Database per service** | Each service owns its data store |
-| **Polyglot persistence** | PostgreSQL, Redis, file storage as appropriate |
-| **Circuit breaker** | Graceful degradation when services fail |
-| **Saga pattern** | Multi-step workflows with compensation |
-| **Sidecar pattern** | API tracer deploys alongside applications |
-| **Gateway pattern** | Single exit point for external communication |
+| Pattern                       | Implementation                                 |
+| ----------------------------- | ---------------------------------------------- |
+| **Event-driven architecture** | Services communicate via RabbitMQ events       |
+| **Database per service**      | Each service owns its data store               |
+| **Polyglot persistence**      | PostgreSQL, Redis, file storage as appropriate |
+| **Circuit breaker**           | Graceful degradation when services fail        |
+| **Saga pattern**              | Multi-step workflows with compensation         |
+| **Sidecar pattern**           | API tracer deploys alongside applications      |
+| **Gateway pattern**           | Single exit point for external communication   |
 
 ---
 
@@ -235,6 +240,7 @@ Security is paramount for a tool that accesses sensitive infrastructure.
 ## Roadmap
 
 ### Phase 1: MVP (Current)
+
 - [ ] Network Scanner (basic port scanning)
 - [ ] Database Inspector (PostgreSQL, MySQL)
 - [ ] Event Bus + Processing Pipeline
@@ -242,12 +248,14 @@ Security is paramount for a tool that accesses sensitive infrastructure.
 - [ ] Docker Compose deployment
 
 ### Phase 2: Extended Discovery
+
 - [ ] Code Analyzer (Git repos, dependency detection)
 - [ ] API Tracer (runtime dependency mapping)
 - [ ] CMDB connectors (ServiceNow, Device42)
 - [ ] Kubernetes deployment (Helm charts)
 
 ### Phase 3: Advanced Features
+
 - [ ] ML-based application classification
 - [ ] Historical trend analysis
 - [ ] Multi-environment correlation

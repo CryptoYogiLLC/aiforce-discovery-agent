@@ -3,9 +3,7 @@
   "$id": "https://aiforce-discovery-agent/schemas/discovered-repository.json",
   "title": "Repository Discovered Event",
   "description": "Event emitted when a code repository is analyzed",
-  "allOf": [
-    { "$ref": "cloudevent-base.json" }
-  ],
+  "allOf": [{ "$ref": "cloudevent-base.json" }],
   "properties": {
     "type": {
       "const": "discovery.repository.discovered"

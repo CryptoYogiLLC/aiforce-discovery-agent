@@ -135,12 +135,20 @@ async def health_check() -> HealthResponse:
 @app.get("/ready", response_model=ReadyResponse)
 async def readiness_check() -> ReadyResponse:
     """Readiness check endpoint."""
-    db_status = "connected" if database and await database.is_healthy() else "disconnected"
+    db_status = (
+        "connected" if database and await database.is_healthy() else "disconnected"
+    )
     mq_status = "connected" if consumer and consumer.is_connected else "disconnected"
-    cb_status = "closed" if batch_processor and not batch_processor.is_circuit_open() else "open"
+    cb_status = (
+        "closed"
+        if batch_processor and not batch_processor.is_circuit_open()
+        else "open"
+    )
 
     return ReadyResponse(
-        status="ready" if db_status == "connected" and mq_status == "connected" else "degraded",
+        status="ready"
+        if db_status == "connected" and mq_status == "connected"
+        else "degraded",
         service="transmitter",
         database=db_status,
         rabbitmq=mq_status,
