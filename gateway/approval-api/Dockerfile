@@ -28,11 +28,10 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
-# Create non-root user
-RUN adduser -D -u 1000 appuser && \
-    chown -R appuser:appuser /app
+# Use existing node user (uid 1000) for security
+RUN chown -R node:node /app
 
-USER appuser
+USER node
 
 # Environment variables
 ENV NODE_ENV=production \

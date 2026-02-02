@@ -1,4 +1,4 @@
-import amqplib, { Channel, Connection } from "amqplib";
+import amqplib, { Channel, ChannelModel } from "amqplib";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
 import { logger } from "./logger";
@@ -14,7 +14,7 @@ interface CloudEvent {
 }
 
 class Consumer {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private connected = false;
 
@@ -28,19 +28,19 @@ class Consumer {
       this.channel = await this.connection.createChannel();
 
       // Setup queue
-      await this.channel.assertQueue(config.rabbitmq.queue, {
+      await this.channel!.assertQueue(config.rabbitmq.queue, {
         durable: true,
       });
 
       // Bind to scored.* events
-      await this.channel.bindQueue(
+      await this.channel!.bindQueue(
         config.rabbitmq.queue,
         config.rabbitmq.exchange,
         "scored.*",
       );
 
       // Start consuming
-      await this.channel.consume(
+      await this.channel!.consume(
         config.rabbitmq.queue,
         async (msg) => {
           if (!msg) return;
@@ -62,7 +62,7 @@ class Consumer {
       logger.info("RabbitMQ consumer connected and listening");
 
       // Handle connection close
-      this.connection.on("close", () => {
+      this.connection!.on("close", () => {
         this.connected = false;
         logger.warn("RabbitMQ connection closed, attempting reconnect...");
         setTimeout(() => this.start(), 5000);

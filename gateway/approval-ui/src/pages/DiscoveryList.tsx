@@ -132,11 +132,13 @@ export default function DiscoveryList() {
                   type="checkbox"
                   onChange={toggleSelectAll}
                   checked={
-                    data &&
-                    data.data.filter((d) => d.status === "pending").length >
-                      0 &&
-                    selected.size ===
-                      data.data.filter((d) => d.status === "pending").length
+                    !!(
+                      data &&
+                      data.data.filter((d) => d.status === "pending").length >
+                        0 &&
+                      selected.size ===
+                        data.data.filter((d) => d.status === "pending").length
+                    )
                   }
                 />
               </th>
