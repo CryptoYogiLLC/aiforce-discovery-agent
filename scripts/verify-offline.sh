@@ -19,13 +19,13 @@ WARNINGS=0
 # Function to report error
 error() {
     echo "❌ ERROR: $1"
-    ((ERRORS++))
+    ((ERRORS++)) || true  # Prevent set -e exit when ERRORS was 0
 }
 
 # Function to report warning
 warn() {
     echo "⚠️  WARNING: $1"
-    ((WARNINGS++))
+    ((WARNINGS++)) || true  # Prevent set -e exit when WARNINGS was 0
 }
 
 # Function to report success
