@@ -289,10 +289,20 @@ export async function queryLogsHandler(
  * GET /api/audit-trail/export
  * Generate compliance export
  */
+// UUID regex pattern for validation
+const UUID_REGEX =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89ABab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+
 export const exportValidation = [
   query("since").optional().isISO8601().withMessage("Invalid since date"),
   query("until").optional().isISO8601().withMessage("Invalid until date"),
-  query("batch_ids").optional().isString().withMessage("Invalid batch IDs"),
+  query("batch_ids")
+    .optional()
+    .custom((value: string) => {
+      const ids = value.split(",").map((id) => id.trim());
+      return ids.every((id) => UUID_REGEX.test(id));
+    })
+    .withMessage("batch_ids must be comma-separated valid UUIDs"),
 ];
 
 export async function exportHandler(

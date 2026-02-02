@@ -75,6 +75,7 @@ export async function logAuditEvent(input: LogEventInput): Promise<void> {
 
 /**
  * Create a new transmission batch
+ * Uses a transaction to ensure atomicity - either all items are inserted or none
  */
 export async function createBatch(
   items: CreateItemInput[],
@@ -85,54 +86,68 @@ export async function createBatch(
   const batchHash = computeHash({ items: allPayloads });
   const totalSize = JSON.stringify(allPayloads).length;
 
-  // Create batch
-  const batchResult = await pool.query(
-    `INSERT INTO gateway.transmission_batches
-     (item_count, total_size_bytes, batch_hash, created_by)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [items.length, totalSize, batchHash, createdBy],
-  );
+  // Use a transaction to ensure atomicity
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const batch = rowToBatch(batchResult.rows[0] as Record<string, unknown>);
-
-  // Insert items
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const payloadHash = computeHash(item.payload);
-
-    await pool.query(
-      `INSERT INTO gateway.transmission_items
-       (batch_id, discovery_id, event_type, record_summary, payload, payload_hash, redacted_fields, redaction_reasons, sequence_number)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        batch.id,
-        item.discovery_id || null,
-        item.event_type,
-        item.record_summary || null,
-        JSON.stringify(item.payload),
-        payloadHash,
-        JSON.stringify(item.redacted_fields || []),
-        JSON.stringify(item.redaction_reasons || {}),
-        i + 1,
-      ],
+    // Create batch
+    const batchResult = await client.query(
+      `INSERT INTO gateway.transmission_batches
+       (item_count, total_size_bytes, batch_hash, created_by)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [items.length, totalSize, batchHash, createdBy],
     );
+
+    const batch = rowToBatch(batchResult.rows[0] as Record<string, unknown>);
+
+    // Insert items
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const payloadHash = computeHash(item.payload);
+
+      await client.query(
+        `INSERT INTO gateway.transmission_items
+         (batch_id, discovery_id, event_type, record_summary, payload, payload_hash, redacted_fields, redaction_reasons, sequence_number)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          batch.id,
+          item.discovery_id || null,
+          item.event_type,
+          item.record_summary || null,
+          JSON.stringify(item.payload),
+          payloadHash,
+          JSON.stringify(item.redacted_fields || []),
+          JSON.stringify(item.redaction_reasons || {}),
+          i + 1,
+        ],
+      );
+    }
+
+    await client.query("COMMIT");
+
+    // Log audit event outside transaction (it's append-only, safe to log separately)
+    await logAuditEvent({
+      event_type: "batch_created",
+      actor_id: createdBy,
+      target_type: "batch",
+      target_id: batch.id,
+      details: { item_count: items.length, total_size: totalSize },
+    });
+
+    logger.info("Transmission batch created", {
+      batchId: batch.id,
+      itemCount: items.length,
+    });
+
+    return batch;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
   }
-
-  await logAuditEvent({
-    event_type: "batch_created",
-    actor_id: createdBy,
-    target_type: "batch",
-    target_id: batch.id,
-    details: { item_count: items.length, total_size: totalSize },
-  });
-
-  logger.info("Transmission batch created", {
-    batchId: batch.id,
-    itemCount: items.length,
-  });
-
-  return batch;
 }
 
 /**

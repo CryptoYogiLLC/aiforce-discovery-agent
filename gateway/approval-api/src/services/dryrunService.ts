@@ -62,12 +62,18 @@ export async function startSession(sessionId: string): Promise<DryrunSession> {
   await updateSessionStatus(sessionId, "generating");
 
   try {
-    // Call orchestrator to start test environment
+    // Call orchestrator to start test environment with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+
     const response = await fetch(`${ORCHESTRATOR_URL}/api/dryrun/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sessionId }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.text();
@@ -246,12 +252,18 @@ export async function stopSession(sessionId: string): Promise<DryrunSession> {
   await updateSessionStatus(sessionId, "cleaning_up");
 
   try {
-    // Call orchestrator to cleanup containers
+    // Call orchestrator to cleanup containers with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+
     const response = await fetch(`${ORCHESTRATOR_URL}/api/dryrun/cleanup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sessionId }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.text();

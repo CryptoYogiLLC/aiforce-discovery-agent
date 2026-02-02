@@ -132,11 +132,12 @@ AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    -- Delete sessions that are marked as cleaned and older than 24 hours
+    -- Delete sessions that are marked as cleaned and completed over 24 hours ago
+    -- Note: Using completed_at because cleanup_at may not be set
     WITH deleted AS (
         DELETE FROM gateway.dryrun_sessions
         WHERE status = 'cleaned'
-        AND cleanup_at < NOW() - INTERVAL '24 hours'
+        AND completed_at < NOW() - INTERVAL '24 hours'
         RETURNING id
     )
     SELECT COUNT(*) INTO deleted_count FROM deleted;
