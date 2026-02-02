@@ -21,6 +21,9 @@ const MIGRATIONS_DIR = path.join(__dirname, "../../migrations");
  * Ensure migrations table exists
  */
 async function ensureMigrationsTable(): Promise<void> {
+  // Create schema first if it doesn't exist
+  await pool.query(`CREATE SCHEMA IF NOT EXISTS gateway`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS gateway.migrations (
       id SERIAL PRIMARY KEY,
@@ -86,7 +89,22 @@ async function runMigration(filename: string): Promise<void> {
  * Seed default admin user with proper password hash
  */
 async function seedDefaultAdmin(): Promise<void> {
-  const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || "changeme";
+  const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+
+  if (!defaultPassword) {
+    logger.warn(
+      "DEFAULT_ADMIN_PASSWORD not set - admin user will not be seeded. " +
+        "Set DEFAULT_ADMIN_PASSWORD environment variable to create admin user.",
+    );
+    return;
+  }
+
+  if (defaultPassword.length < 12) {
+    logger.error(
+      "DEFAULT_ADMIN_PASSWORD must be at least 12 characters for security",
+    );
+    return;
+  }
 
   // Check if admin exists with placeholder hash
   const result = await pool.query(

@@ -56,11 +56,11 @@ export function authenticate(
 /**
  * CSRF validation middleware - for state-changing requests (POST, PUT, DELETE)
  */
-export function validateCsrf(
+export async function validateCsrf(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   // Skip CSRF for safe methods
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
     next();
@@ -70,7 +70,7 @@ export function validateCsrf(
   const csrfHeader = req.headers[SESSION_CONFIG.CSRF_HEADER] as string;
 
   if (!csrfHeader || csrfHeader !== req.csrfToken) {
-    logAuthEvent(req, "csrf_validation_failed", false);
+    await logAuthEvent(req, "csrf_validation_failed", false);
     res.status(403).json({ error: "Invalid CSRF token" });
     return;
   }

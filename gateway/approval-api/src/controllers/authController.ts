@@ -5,6 +5,7 @@
 
 import { Request, Response } from "express";
 import { body, validationResult } from "express-validator";
+import argon2 from "argon2";
 import {
   createSession,
   deleteSession,
@@ -303,8 +304,18 @@ export async function recover(req: Request, res: Response): Promise<void> {
     );
 
     if (userResult.rows.length === 0) {
-      // Don't reveal if user exists
-      res.status(400).json({ error: "Invalid recovery code" });
+      // Timing attack prevention: perform dummy hash verification
+      // to ensure consistent response time whether user exists or not
+      try {
+        await argon2.verify(
+          "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG",
+          recovery_code,
+        );
+      } catch {
+        // Expected to fail, just for timing consistency
+      }
+      await logAuthEvent(req, "recovery_failed", false, { username });
+      res.status(400).json({ error: "Invalid or expired recovery code" });
       return;
     }
 
@@ -337,6 +348,12 @@ export const logoutAllValidation = [
 ];
 
 export async function logoutAll(req: Request, res: Response): Promise<void> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+
   if (!req.user) {
     res.status(401).json({ error: "Not authenticated" });
     return;

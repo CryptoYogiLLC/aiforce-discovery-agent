@@ -12,7 +12,6 @@ import {
   updateUser,
   deactivateUser,
   reactivateUser,
-  usernameExists,
   emailExists,
   getUserPermissions,
 } from "../services/userService";
@@ -137,17 +136,8 @@ router.post(
     const { username, email, password, role } = req.body;
 
     try {
-      // Check for duplicates
-      if (await usernameExists(username)) {
-        res.status(409).json({ error: "Username already exists" });
-        return;
-      }
-
-      if (await emailExists(email)) {
-        res.status(409).json({ error: "Email already exists" });
-        return;
-      }
-
+      // Rely on database unique constraints to prevent race conditions
+      // instead of pre-checking which has TOCTOU vulnerability
       const user = await createUser({ username, email, password, role });
 
       await logAuthEvent(req, "user_created", true, {
@@ -158,6 +148,19 @@ router.post(
 
       res.status(201).json(user);
     } catch (err) {
+      // Check for PostgreSQL unique constraint violation
+      const pgError = err as { code?: string; constraint?: string };
+      if (pgError.code === "23505") {
+        // Unique constraint violation
+        if (pgError.constraint?.includes("username")) {
+          res.status(409).json({ error: "Username already exists" });
+        } else if (pgError.constraint?.includes("email")) {
+          res.status(409).json({ error: "Email already exists" });
+        } else {
+          res.status(409).json({ error: "Username or email already exists" });
+        }
+        return;
+      }
       logger.error("Create user error", { error: (err as Error).message });
       res.status(500).json({ error: "Failed to create user" });
     }

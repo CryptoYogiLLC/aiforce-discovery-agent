@@ -33,13 +33,18 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Rate limiting for recovery attempts
+// Rate limiting for recovery attempts (per username+IP to prevent distributed attacks)
 const recoveryLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3,
+  max: 5,
   message: { error: "Too many recovery attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Rate limit by combination of username and IP to prevent distributed brute-force
+    const username = (req.body?.username as string) || "unknown";
+    return `${req.ip}-${username}`;
+  },
 });
 
 /**
@@ -57,10 +62,10 @@ router.post("/recover", recoveryLimiter, recoverValidation, recover);
  */
 
 // POST /api/auth/logout - Destroy session
-router.post("/logout", authenticate, logout);
+router.post("/logout", authenticate, validateCsrf, logout);
 
 // POST /api/auth/refresh - Extend session
-router.post("/refresh", authenticate, refresh);
+router.post("/refresh", authenticate, validateCsrf, refresh);
 
 // GET /api/auth/me - Get current user info
 router.get("/me", authenticate, me);

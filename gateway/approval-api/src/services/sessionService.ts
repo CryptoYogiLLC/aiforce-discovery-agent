@@ -41,7 +41,8 @@ export async function createSession(
     ],
   );
 
-  logger.info("Session created", { userId, sessionId, expiresAt });
+  // Note: Don't log sessionId as it's a bearer-equivalent secret
+  logger.info("Session created", { userId, expiresAt });
   return { sessionId, csrfToken };
 }
 
@@ -85,7 +86,8 @@ export async function getSessionWithUser(
  */
 export async function deleteSession(sessionId: string): Promise<void> {
   await pool.query("DELETE FROM gateway.sessions WHERE id = $1", [sessionId]);
-  logger.info("Session deleted", { sessionId });
+  // Note: Don't log sessionId as it's a bearer-equivalent secret
+  logger.info("Session deleted");
 }
 
 /**
@@ -218,8 +220,9 @@ export async function generateRecoveryCode(
   targetUserId: string,
   createdByUserId: string,
 ): Promise<{ code: string; expiresAt: Date }> {
-  // Generate a readable recovery code (8 chars alphanumeric)
-  const code = crypto.randomBytes(4).toString("hex").toUpperCase();
+  // Generate a readable recovery code (16 chars hex = 64 bits entropy)
+  // Increased from 8 chars to prevent realistic brute-force attacks
+  const code = crypto.randomBytes(8).toString("hex").toUpperCase();
   const codeHash = await hashPassword(code);
   const expiresAt = new Date(
     Date.now() + SESSION_CONFIG.RECOVERY_CODE_EXPIRY_MS,
