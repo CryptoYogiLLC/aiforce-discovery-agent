@@ -49,7 +49,8 @@ EXTERNAL_PATTERNS=(
 
 FOUND_EXTERNAL=false
 for pattern in "${EXTERNAL_PATTERNS[@]}"; do
-    if grep -r "$pattern" gateway/approval-ui/src/ gateway/approval-ui/index.html 2>/dev/null; then
+    # Use -q to suppress output, only check exit status
+    if grep -rq "$pattern" gateway/approval-ui/src/ gateway/approval-ui/index.html 2>/dev/null; then
         error "External URL found: $pattern"
         FOUND_EXTERNAL=true
     fi
@@ -122,14 +123,14 @@ success "Dockerfiles checked for runtime dependencies"
 echo ""
 echo "[5/6] Checking source code for hardcoded external URLs..."
 
-# Python files
+# Python files - filter out comment lines and docstrings
 if grep -rE 'https?://[^/]+\.(com|org|io|net)' \
     --include="*.py" \
     --exclude-dir=".git" \
     --exclude-dir="node_modules" \
     --exclude-dir="__pycache__" \
     --exclude-dir=".venv" \
-    . 2>/dev/null | grep -vE '(localhost|127\.0\.0\.1|example\.com|#|"""|\x27\x27\x27)' | head -5; then
+    . 2>/dev/null | grep -vE '^\s*#' | grep -vE '(localhost|127\.0\.0\.1|example\.com|"""|\x27\x27\x27)' | head -5; then
     warn "Some external URLs found in Python code (review manually)"
 else
     success "No suspicious external URLs in Python code"
