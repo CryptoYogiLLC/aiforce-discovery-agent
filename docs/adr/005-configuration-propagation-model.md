@@ -136,6 +136,51 @@ The "start scan" orchestration lives in **`approval-api`** (not a separate servi
 
 The `approval-api` is the single point of control for scan operations. The `dryrun-orchestrator` is only responsible for container lifecycle, not scan coordination.
 
+### Failure Semantics
+
+If one or more collectors fail to start, the scan is marked as **partial** with details:
+
+```typescript
+async function startScan(userId: string): Promise<Scan> {
+  const results = await Promise.allSettled([
+    networkScanner.startScan(scan.id, config.network),
+    codeAnalyzer.startScan(scan.id, config.code),
+    dbInspector.startScan(scan.id, config.database),
+  ]);
+
+  const failures = results
+    .filter((r) => r.status === "rejected")
+    .map((r, i) => ({
+      collector: ["network", "code", "database"][i],
+      error: r.reason,
+    }));
+
+  if (failures.length === results.length) {
+    // All failed - abort scan
+    await db.query("UPDATE scans SET status = $1, error = $2 WHERE id = $3", [
+      "failed",
+      JSON.stringify(failures),
+      scan.id,
+    ]);
+    throw new Error("All collectors failed to start");
+  }
+
+  if (failures.length > 0) {
+    // Partial success - continue with warning
+    await db.query(
+      "UPDATE scans SET status = $1, warnings = $2 WHERE id = $3",
+      ["partial", JSON.stringify(failures), scan.id],
+    );
+  }
+
+  return scan;
+}
+```
+
+- **All fail**: Scan aborted, user notified with error details
+- **Some fail**: Scan proceeds with available collectors, UI shows warning
+- **All succeed**: Normal scan execution
+
 ### Scan Execution Service
 
 ```typescript

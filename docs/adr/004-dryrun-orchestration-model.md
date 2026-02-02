@@ -103,6 +103,23 @@ We will implement a **dedicated dry-run orchestrator service** with strict privi
        return image_name.startswith(ALLOWED_IMAGE_PREFIX)
    ```
 
+4. **No User-Provided Compose Content**: The orchestrator ONLY accepts predefined template IDs (e.g., "small", "medium", "large", "custom-db-heavy"). Users cannot provide arbitrary docker-compose YAML or container definitions.
+
+   ```python
+   # ALLOWED: Select from predefined templates
+   TEMPLATES = {
+       "small": "templates/small.yml",      # 5 containers
+       "medium": "templates/medium.yml",    # 10 containers
+       "large": "templates/large.yml",      # 20 containers
+   }
+
+   def start_session(template_id: str) -> Session:
+       if template_id not in TEMPLATES:
+           raise ValueError(f"Unknown template: {template_id}")
+       # Load from trusted local file only
+       compose_file = TEMPLATES[template_id]
+   ```
+
 ### Data Partitioning
 
 All dry-run discoveries are stored with:

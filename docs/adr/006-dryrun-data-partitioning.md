@@ -165,6 +165,31 @@ ROUTING_KEY = "approved.*"  # Only production approvals
 
 This ensures that even if code accidentally calls the wrong API endpoint, the event bus routing prevents dry-run data from reaching the transmitter.
 
+### CI Guard Test
+
+Add a test that fails if the transmitter binding is changed to a dangerous pattern:
+
+```python
+# tests/test_transmitter_safety.py
+import pytest
+from transmitter.consumer import ROUTING_KEY
+
+def test_transmitter_never_binds_to_dryrun():
+    """Guard test: transmitter must never consume dry-run events."""
+    dangerous_patterns = ['#', 'dryrun.*', 'dryrun.approved.*', '*']
+    assert ROUTING_KEY not in dangerous_patterns, \
+        f"CRITICAL: Transmitter binding '{ROUTING_KEY}' would consume dry-run data!"
+    assert not ROUTING_KEY.startswith('dryrun'), \
+        f"CRITICAL: Transmitter binding '{ROUTING_KEY}' starts with 'dryrun'!"
+
+def test_transmitter_binds_to_approved_only():
+    """Transmitter should only bind to production approved events."""
+    assert ROUTING_KEY == 'approved.*', \
+        f"Expected 'approved.*', got '{ROUTING_KEY}'"
+```
+
+This test runs in CI and prevents accidental changes that would break isolation.
+
 ## Consequences
 
 ### Positive

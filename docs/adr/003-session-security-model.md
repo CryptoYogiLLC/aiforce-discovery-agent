@@ -91,6 +91,50 @@ This is already the architecture in `docker-compose.yml` where nginx proxies bot
 
 ## Implementation Notes
 
+### Session Fixation Prevention
+
+On successful login, always regenerate the session ID:
+
+```typescript
+async function login(
+  username: string,
+  password: string,
+  req: Request,
+  res: Response,
+) {
+  const user = await validateCredentials(username, password);
+
+  // Destroy old session and create new one (prevents session fixation)
+  await destroySession(req.cookies.session_id);
+  const newSessionId = await createSession(user.id);
+
+  res.cookie("session_id", newSessionId, {
+    /* ... */
+  });
+}
+```
+
+### Password Hashing
+
+Use **Argon2id** (preferred) or **bcrypt** with minimum cost factor 12:
+
+```typescript
+import argon2 from "argon2";
+
+// Hash password on registration/change
+const hash = await argon2.hash(password, {
+  type: argon2.argon2id,
+  memoryCost: 65536, // 64 MB
+  timeCost: 3,
+  parallelism: 4,
+});
+
+// Verify on login
+const valid = await argon2.verify(hash, password);
+```
+
+Minimum password policy: 12+ characters, no dictionary words.
+
 ### Cookie Configuration
 
 ```typescript
