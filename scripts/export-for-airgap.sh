@@ -23,7 +23,7 @@ mkdir -p "${OUTPUT_DIR}/config/rabbitmq"
 # Build all images
 echo "[1/7] Building Docker images..."
 cd "$PROJECT_ROOT"
-docker-compose build
+docker compose build
 
 # Define image lists
 APP_IMAGES=(
@@ -194,7 +194,7 @@ echo "=============================================="
 echo ""
 echo "Next steps:"
 echo "  1. Edit .env with secure passwords"
-echo "  2. Run: docker-compose up -d"
+echo "  2. Run: docker compose up -d"
 echo "  3. Access UI at http://localhost:3000"
 echo ""
 IMPORTEOF
@@ -254,5 +254,5 @@ echo "  1. Transfer ${BUNDLE_NAME} to target machine"
 echo "  2. Extract: tar -xzf ${BUNDLE_NAME}"
 echo "  3. Run: ./import-airgap.sh"
 echo "  4. Edit .env with secure passwords"
-echo "  5. Start: docker-compose up -d"
+echo "  5. Start: docker compose up -d"
 echo ""

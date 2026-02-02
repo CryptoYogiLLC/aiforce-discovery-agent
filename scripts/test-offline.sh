@@ -19,7 +19,7 @@ cd "$PROJECT_ROOT"
 cleanup() {
     echo ""
     echo "Cleaning up..."
-    docker-compose -f docker-compose.yml -f docker-compose.offline-test.yml down -v 2>/dev/null || true
+    docker compose -f docker-compose.yml -f docker-compose.offline-test.yml down -v 2>/dev/null || true
     docker network rm offline-test-net 2>/dev/null || true
     rm -rf ./airgap-bundle 2>/dev/null || true
     rm -f discovery-agent-airgap-test.tar.gz 2>/dev/null || true
@@ -37,7 +37,7 @@ echo "[1/8] Running offline verification..."
 # 2. Build images
 echo ""
 echo "[2/8] Building all Docker images..."
-docker-compose build --quiet
+docker compose build --quiet
 
 # 3. Export images (test the export script)
 echo ""
@@ -56,7 +56,7 @@ echo "Bundle created: $(du -h discovery-agent-airgap-test.tar.gz | cut -f1)"
 # 5. Clean Docker to simulate fresh environment
 echo ""
 echo "[5/8] Simulating fresh environment..."
-docker-compose down -v 2>/dev/null || true
+docker compose down -v 2>/dev/null || true
 
 # Remove application images to test import
 docker images --format '{{.Repository}}:{{.Tag}}' | grep 'discovery-' | xargs -r docker rmi -f 2>/dev/null || true
@@ -98,10 +98,10 @@ fi
 
 # Start services with minimal profile
 cd discovery-agent
-docker-compose up -d postgres rabbitmq redis approval-api approval-ui 2>/dev/null || {
+docker compose up -d postgres rabbitmq redis approval-api approval-ui 2>/dev/null || {
     echo "Services failed to start. Checking with regular compose..."
     cd "$PROJECT_ROOT"
-    docker-compose up -d postgres rabbitmq redis 2>/dev/null
+    docker compose up -d postgres rabbitmq redis 2>/dev/null
 }
 cd "$PROJECT_ROOT"
 
@@ -116,7 +116,7 @@ HEALTH_OK=false
 echo "Waiting for services to be healthy..."
 while [ $WAITED -lt $MAX_WAIT ]; do
     # Check if core services are up
-    if docker-compose ps 2>/dev/null | grep -q "healthy\|running"; then
+    if docker compose ps 2>/dev/null | grep -q "healthy\|running"; then
         HEALTH_OK=true
         break
     fi
@@ -128,7 +128,7 @@ done
 if [ "$HEALTH_OK" = true ]; then
     echo ""
     echo "Services are running:"
-    docker-compose ps 2>/dev/null || docker ps --filter "name=discovery"
+    docker compose ps 2>/dev/null || docker ps --filter "name=discovery"
 else
     echo "WARNING: Services did not become healthy within ${MAX_WAIT}s"
     echo "This may be expected in CI without full infrastructure"
