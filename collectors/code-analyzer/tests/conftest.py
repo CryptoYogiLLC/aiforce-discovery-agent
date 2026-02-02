@@ -1,9 +1,26 @@
 """Pytest configuration and fixtures for Code Analyzer tests."""
 
+import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+# Mock aio_pika before any test imports src.main
+mock_aio_pika = MagicMock()
+mock_aio_pika.connect_robust = AsyncMock()
+mock_aio_pika.RobustConnection = MagicMock()
+mock_aio_pika.Channel = MagicMock()
+mock_aio_pika.ExchangeType = MagicMock()
+mock_aio_pika.ExchangeType.TOPIC = "topic"
+sys.modules["aio_pika"] = mock_aio_pika
+
+# Mock prometheus_client
+mock_prometheus = MagicMock()
+mock_prometheus.CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+mock_prometheus.generate_latest = MagicMock(return_value=b"# HELP test metric\n")
+sys.modules["prometheus_client"] = mock_prometheus
 
 
 @pytest.fixture
@@ -80,11 +97,10 @@ pytest-cov>=4.0.0
 """
         )
 
-        # package.json (for multi-language repo)
-        (repo_path / "frontend").mkdir()
-        (repo_path / "frontend" / "package.json").write_text(
+        # package.json at root level (for dependency extraction tests)
+        (repo_path / "package.json").write_text(
             """{
-  "name": "test-frontend",
+  "name": "test-project",
   "version": "1.0.0",
   "dependencies": {
     "react": "^18.2.0",
@@ -97,6 +113,9 @@ pytest-cov>=4.0.0
 }
 """
         )
+
+        # Also keep a frontend directory with JS files for other tests
+        (repo_path / "frontend").mkdir()
 
         # JavaScript file
         (repo_path / "frontend" / "index.js").write_text(

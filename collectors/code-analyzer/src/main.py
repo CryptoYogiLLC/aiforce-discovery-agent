@@ -120,10 +120,13 @@ async def ready() -> dict[str, str | bool]:
     return {"status": "ready", "rabbitmq": rabbitmq_ok}
 
 
-@app.get("/metrics", response_class=PlainTextResponse)
-async def metrics() -> str:
+@app.get("/metrics")
+async def metrics() -> PlainTextResponse:
     """Prometheus metrics endpoint."""
-    return generate_latest().decode("utf-8"), 200, {"Content-Type": CONTENT_TYPE_LATEST}
+    return PlainTextResponse(
+        content=generate_latest().decode("utf-8"),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 
 @app.post("/api/v1/analyze", response_model=AnalyzeResponse)
