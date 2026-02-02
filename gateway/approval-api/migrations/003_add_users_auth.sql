@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS gateway.recovery_codes (
 
 CREATE INDEX IF NOT EXISTS idx_recovery_codes_user_id ON gateway.recovery_codes(user_id);
 CREATE INDEX IF NOT EXISTS idx_recovery_codes_expires ON gateway.recovery_codes(expires_at);
+-- Enforce single active (unused) recovery code per user at database level
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recovery_codes_single_active ON gateway.recovery_codes(user_id) WHERE used_at IS NULL;
 
 -- Role permissions table (for future extensibility)
 CREATE TABLE IF NOT EXISTS gateway.role_permissions (

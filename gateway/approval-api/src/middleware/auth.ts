@@ -154,8 +154,20 @@ export function requirePermission(permission: string) {
   };
 }
 
+// Valid audit event types for auth actions
+type AuthEventType =
+  | "user_login"
+  | "login_failed"
+  | "user_logout"
+  | "password_changed"
+  | "session_created"
+  | "session_destroyed"
+  | "access_denied"
+  | "csrf_failed";
+
 /**
  * Log authentication/authorization events for audit
+ * Uses the new audit_log schema with proper ENUM event types
  */
 export async function logAuthEvent(
   req: Request,
@@ -163,17 +175,53 @@ export async function logAuthEvent(
   success: boolean,
   details?: Record<string, unknown>,
 ): Promise<void> {
+  // Map action strings to valid ENUM values
+  let eventType: AuthEventType;
+  if (action === "login_success") {
+    eventType = "user_login";
+  } else if (action === "login_failed") {
+    eventType = "login_failed";
+  } else if (action === "logout") {
+    eventType = "user_logout";
+  } else if (
+    action === "password_changed" ||
+    action === "password_change_failed"
+  ) {
+    eventType = "password_changed";
+  } else if (action === "password_recovered") {
+    eventType = "password_changed";
+  } else if (action.startsWith("csrf_")) {
+    eventType = "csrf_failed";
+  } else if (
+    action.startsWith("access_denied") ||
+    action.startsWith("permission_denied")
+  ) {
+    eventType = "access_denied";
+  } else if (
+    action === "recovery_code_generated" ||
+    action === "recovery_failed"
+  ) {
+    eventType = "password_changed";
+  } else if (action === "logout_all") {
+    eventType = "session_destroyed";
+  } else {
+    // Default to access_denied for unknown auth events
+    eventType = "access_denied";
+  }
+
   try {
     await pool.query(
-      `INSERT INTO gateway.audit_log (event_type, event_category, actor_id, details)
-       VALUES ($1, $2, $3, $4)`,
+      `INSERT INTO gateway.audit_log (event_type, actor_id, actor_username, actor_ip, target_type, details)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
       [
-        action,
-        "auth",
+        eventType,
         req.user?.id || null,
+        req.user?.username || null,
+        req.ip || null,
+        "session",
         JSON.stringify({
+          action, // Store original action for specificity
           success,
-          ip_address: req.ip,
           user_agent: req.headers["user-agent"],
           path: req.path,
           method: req.method,
