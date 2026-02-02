@@ -200,8 +200,22 @@ echo ""
 IMPORTEOF
 chmod +x "${OUTPUT_DIR}/import-airgap.sh"
 
-# Create manifest
+# Create manifest using only valid (exported) images
 echo "[7/7] Creating manifest..."
+
+# Generate JSON array for application images
+generate_json_array() {
+    local -n arr=$1
+    if [ ${#arr[@]} -eq 0 ]; then
+        echo "[]"
+    else
+        printf '[\n'
+        printf '      "%s"' "${arr[0]}"
+        for img in "${arr[@]:1}"; do printf ',\n      "%s"' "$img"; done
+        printf '\n    ]'
+    fi
+}
+
 cat > "${OUTPUT_DIR}/manifest.json" << MANIFESTEOF
 {
   "name": "discovery-agent",
@@ -213,14 +227,8 @@ cat > "${OUTPUT_DIR}/manifest.json" << MANIFESTEOF
     "infrastructure-images": "$(sha256sum "${OUTPUT_DIR}/infrastructure-images.tar" 2>/dev/null | cut -d' ' -f1 || echo 'N/A')"
   },
   "images": {
-    "application": [
-$(printf '      "%s"' "${APP_IMAGES[0]}")
-$(for img in "${APP_IMAGES[@]:1}"; do printf ',\n      "%s"' "$img"; done)
-    ],
-    "infrastructure": [
-$(printf '      "%s"' "${INFRA_IMAGES[0]}")
-$(for img in "${INFRA_IMAGES[@]:1}"; do printf ',\n      "%s"' "$img"; done)
-    ]
+    "application": $(generate_json_array VALID_APP_IMAGES),
+    "infrastructure": $(generate_json_array INFRA_IMAGES)
   }
 }
 MANIFESTEOF
