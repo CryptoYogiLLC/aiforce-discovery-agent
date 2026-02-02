@@ -12,7 +12,6 @@ import {
   updateUser,
   deactivateUser,
   reactivateUser,
-  emailExists,
   getUserPermissions,
 } from "../services/userService";
 import {
@@ -197,18 +196,8 @@ router.patch(
         return;
       }
 
-      // Check email uniqueness if changing
-      if (email) {
-        const existing = await emailExists(email);
-        if (existing) {
-          const currentUser = await getUserById(req.params.id);
-          if (currentUser?.email !== email) {
-            res.status(409).json({ error: "Email already exists" });
-            return;
-          }
-        }
-      }
-
+      // Email uniqueness is enforced by database UNIQUE constraint
+      // This prevents race conditions that a manual check would have
       const user = await updateUser(req.params.id, { email, role, is_active });
 
       if (!user) {
@@ -223,7 +212,13 @@ router.patch(
 
       res.json(user);
     } catch (err) {
-      logger.error("Update user error", { error: (err as Error).message });
+      const error = err as Error & { code?: string };
+      // Handle unique constraint violation from database
+      if (error.code === "23505" && error.message.includes("email")) {
+        res.status(409).json({ error: "Email already exists" });
+        return;
+      }
+      logger.error("Update user error", { error: error.message });
       res.status(500).json({ error: "Failed to update user" });
     }
   },
