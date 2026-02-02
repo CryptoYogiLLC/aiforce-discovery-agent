@@ -22,7 +22,8 @@
     "express-validator": "^7.0.1",
     "pg": "^8.11.3",
     "uuid": "^9.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.4",
