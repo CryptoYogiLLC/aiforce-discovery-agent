@@ -42,11 +42,12 @@ CREATE TABLE IF NOT EXISTS gateway.recovery_codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES gateway.users(id) ON DELETE CASCADE,
     code_hash VARCHAR(255) NOT NULL,
-    created_by UUID NOT NULL REFERENCES gateway.users(id),
+    created_by UUID REFERENCES gateway.users(id) ON DELETE SET NULL,
     expires_at TIMESTAMP NOT NULL,
     used_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
 
+    CONSTRAINT valid_expiry CHECK (expires_at > created_at),
     CONSTRAINT single_use CHECK (used_at IS NULL OR used_at > created_at)
 );
 
@@ -60,7 +61,8 @@ CREATE TABLE IF NOT EXISTS gateway.role_permissions (
     permission VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
 
-    UNIQUE(role, permission)
+    UNIQUE(role, permission),
+    CONSTRAINT valid_role CHECK (role IN ('admin', 'operator', 'viewer'))
 );
 
 -- Seed default permissions

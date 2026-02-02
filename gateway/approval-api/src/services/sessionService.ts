@@ -200,14 +200,15 @@ export async function changePassword(
     return false;
   }
 
+  // Invalidate all sessions BEFORE changing password to prevent race conditions
+  // where a session could still use the old password during the update window
+  await deleteAllUserSessions(userId);
+
   const newHash = await hashPassword(newPassword);
   await pool.query(
     "UPDATE gateway.users SET password_hash = $1, password_changed_at = NOW() WHERE id = $2",
     [newHash, userId],
   );
-
-  // Invalidate all other sessions (security measure)
-  await deleteAllUserSessions(userId);
 
   logger.info("Password changed", { userId });
   return true;

@@ -184,6 +184,28 @@ export async function cloneProfile(
     };
   }
 
+  // Validate cloned profile settings to ensure they're safe for custom use
+  const toValidate: CreateProfileInput = {
+    name: newName,
+    description: `Cloned from ${source.name}`,
+    target_subnets: source.target_subnets,
+    port_ranges: source.port_ranges,
+    scan_rate_limit: source.scan_rate_limit,
+    max_services: source.max_services,
+    max_hosts: source.max_hosts,
+    timeout_seconds: source.timeout_seconds,
+    disk_space_limit_mb: source.disk_space_limit_mb,
+    memory_limit_mb: source.memory_limit_mb,
+    enabled_collectors: source.enabled_collectors,
+    advanced_settings: source.advanced_settings,
+  };
+  const validationErrors = validateProfile(toValidate);
+  const crossFieldErrors = validateCrossField(toValidate);
+  const allErrors = [...validationErrors, ...crossFieldErrors];
+  if (allErrors.length > 0) {
+    return { errors: allErrors };
+  }
+
   const result = await pool.query(
     `INSERT INTO gateway.config_profiles (
       name, description, profile_type,
@@ -462,38 +484,75 @@ export function parseYamlImport(data: unknown): {
     };
   }
 
-  const profile = obj.profile as Record<string, unknown>;
-  if (!profile) {
+  if (typeof obj.profile !== "object" || obj.profile === null) {
     return {
-      errors: [{ field: "profile", message: "Missing profile section" }],
+      errors: [
+        { field: "profile", message: "Missing or invalid profile section" },
+      ],
     };
   }
+  const profile = obj.profile as Record<string, unknown>;
 
-  const network = profile.network as Record<string, unknown> | undefined;
-  const limits = profile.limits as Record<string, unknown> | undefined;
-  const resources = profile.resources as Record<string, unknown> | undefined;
+  // Safe extraction with type guards
+  const network =
+    typeof profile.network === "object" && profile.network !== null
+      ? (profile.network as Record<string, unknown>)
+      : {};
+  const limits =
+    typeof profile.limits === "object" && profile.limits !== null
+      ? (profile.limits as Record<string, unknown>)
+      : {};
+  const resources =
+    typeof profile.resources === "object" && profile.resources !== null
+      ? (profile.resources as Record<string, unknown>)
+      : {};
 
   const input: CreateProfileInput = {
-    name: profile.name as string,
-    description: profile.description as string | undefined,
-    target_subnets: network?.target_subnets as string[] | undefined,
-    port_ranges: network?.port_ranges as
-      | { tcp: string; udp: string }
-      | undefined,
-    scan_rate_limit: network?.scan_rate_limit as number | undefined,
-    max_services: limits?.max_services as number | undefined,
-    max_hosts: limits?.max_hosts as number | undefined,
-    timeout_seconds: limits?.timeout_seconds as number | undefined,
-    disk_space_limit_mb: resources?.disk_space_limit_mb as number | undefined,
-    memory_limit_mb: resources?.memory_limit_mb as number | undefined,
-    enabled_collectors: profile.collectors as string[] | undefined,
-    advanced_settings: profile.advanced as Record<string, unknown> | undefined,
+    name: typeof profile.name === "string" ? profile.name : ("" as string),
+    description:
+      typeof profile.description === "string" ? profile.description : undefined,
+    target_subnets: Array.isArray(network.target_subnets)
+      ? (network.target_subnets as string[])
+      : undefined,
+    port_ranges:
+      typeof network.port_ranges === "object" && network.port_ranges !== null
+        ? (network.port_ranges as { tcp: string; udp: string })
+        : undefined,
+    scan_rate_limit:
+      typeof network.scan_rate_limit === "number"
+        ? network.scan_rate_limit
+        : undefined,
+    max_services:
+      typeof limits.max_services === "number" ? limits.max_services : undefined,
+    max_hosts:
+      typeof limits.max_hosts === "number" ? limits.max_hosts : undefined,
+    timeout_seconds:
+      typeof limits.timeout_seconds === "number"
+        ? limits.timeout_seconds
+        : undefined,
+    disk_space_limit_mb:
+      typeof resources.disk_space_limit_mb === "number"
+        ? resources.disk_space_limit_mb
+        : undefined,
+    memory_limit_mb:
+      typeof resources.memory_limit_mb === "number"
+        ? resources.memory_limit_mb
+        : undefined,
+    enabled_collectors: Array.isArray(profile.collectors)
+      ? (profile.collectors as string[])
+      : undefined,
+    advanced_settings:
+      typeof profile.advanced === "object" && profile.advanced !== null
+        ? (profile.advanced as Record<string, unknown>)
+        : undefined,
   };
 
-  // Validate parsed input
-  const errors = validateProfile(input);
-  if (errors.length > 0) {
-    return { errors };
+  // Validate parsed input - both field-level and cross-field validation
+  const fieldErrors = validateProfile(input);
+  const crossFieldErrors = validateCrossField(input);
+  const allErrors = [...fieldErrors, ...crossFieldErrors];
+  if (allErrors.length > 0) {
+    return { errors: allErrors };
   }
 
   return { input };
