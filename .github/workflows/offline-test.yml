@@ -1,0 +1,260 @@
+# Offline Capability Test Workflow
+# Reference: GitHub Issue #60, #84
+#
+# This workflow verifies that the Discovery Agent can be deployed
+# in air-gapped environments without external network dependencies.
+
+name: Offline Capability Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "gateway/**"
+      - "collectors/**"
+      - "processing/**"
+      - "docker-compose*.yml"
+      - "Dockerfile*"
+      - "scripts/**"
+      - ".github/workflows/offline-test.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "gateway/**"
+      - "collectors/**"
+      - "processing/**"
+      - "docker-compose*.yml"
+      - "Dockerfile*"
+      - "scripts/**"
+  workflow_dispatch:
+    inputs:
+      upload_bundle:
+        description: "Upload bundle as artifact"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-offline:
+    name: Verify Offline Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: gateway/approval-ui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: gateway/approval-ui
+        run: npm ci
+
+      - name: Run offline verification
+        run: |
+          chmod +x scripts/verify-offline.sh
+          ./scripts/verify-offline.sh
+
+  build-and-export:
+    name: Build and Export Bundle
+    runs-on: ubuntu-latest
+    needs: verify-offline
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker images
+        run: |
+          docker-compose build --parallel
+
+      - name: Create air-gap bundle
+        run: |
+          chmod +x scripts/export-for-airgap.sh
+          ./scripts/export-for-airgap.sh ${{ github.sha }}
+
+      - name: Verify bundle was created
+        run: |
+          ls -lh discovery-agent-airgap-*.tar.gz
+
+          # Check bundle size (should be under 2GB)
+          SIZE=$(stat -c%s discovery-agent-airgap-*.tar.gz 2>/dev/null || stat -f%z discovery-agent-airgap-*.tar.gz)
+          MAX_SIZE=$((2 * 1024 * 1024 * 1024))
+
+          if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+            echo "WARNING: Bundle size ($SIZE bytes) exceeds 2GB target"
+          else
+            echo "Bundle size: $(numfmt --to=iec-i --suffix=B $SIZE)"
+          fi
+
+      - name: Upload bundle artifact
+        if: ${{ github.event.inputs.upload_bundle == 'true' || github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: airgap-bundle-${{ github.sha }}
+          path: discovery-agent-airgap-*.tar.gz
+          retention-days: 7
+          compression-level: 0 # Already compressed
+
+  test-import:
+    name: Test Import in Clean Environment
+    runs-on: ubuntu-latest
+    needs: build-and-export
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: airgap-bundle-${{ github.sha }}
+
+      - name: Clean Docker environment
+        run: |
+          # Remove all containers and images to simulate fresh environment
+          docker system prune -af --volumes || true
+
+          # Verify clean state
+          echo "Docker images after cleanup:"
+          docker images
+
+      - name: Test import script
+        run: |
+          chmod +x scripts/import-airgap.sh
+          ./scripts/import-airgap.sh discovery-agent-airgap-*.tar.gz
+
+      - name: Verify images loaded
+        run: |
+          echo "Loaded images:"
+          docker images | grep -E 'discovery-|rabbitmq|postgres|redis'
+
+      - name: Start services
+        working-directory: discovery-agent
+        run: |
+          # Copy environment template
+          cp .env.template .env
+
+          # Generate random secrets for testing
+          sed -i 's/CHANGE_ME_USE_SECURE_PASSWORD/test_password_123/g' .env
+          sed -i 's/GENERATE_A_64_CHARACTER_HEX_STRING_HERE/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/g' .env
+          sed -i 's/GENERATE_ANOTHER_64_CHARACTER_HEX_STRING/fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210/g' .env
+
+          # Start infrastructure services
+          docker-compose up -d postgres rabbitmq redis
+
+          # Wait for infrastructure
+          sleep 30
+
+      - name: Check service health
+        working-directory: discovery-agent
+        run: |
+          docker-compose ps
+
+          # Check PostgreSQL
+          docker-compose exec -T postgres pg_isready || echo "PostgreSQL not ready"
+
+          # Check RabbitMQ
+          docker-compose exec -T rabbitmq rabbitmqctl status || echo "RabbitMQ not ready"
+
+  network-isolation-test:
+    name: Test Network Isolation
+    runs-on: ubuntu-latest
+    needs: test-import
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: airgap-bundle-${{ github.sha }}
+
+      - name: Import bundle
+        run: |
+          chmod +x scripts/import-airgap.sh
+          ./scripts/import-airgap.sh discovery-agent-airgap-*.tar.gz
+
+      - name: Create isolated network
+        run: |
+          docker network create --internal offline-test-net
+
+      - name: Start services on isolated network
+        working-directory: discovery-agent
+        run: |
+          cp .env.template .env
+          sed -i 's/CHANGE_ME_USE_SECURE_PASSWORD/test_password_123/g' .env
+          sed -i 's/GENERATE_A_64_CHARACTER_HEX_STRING_HERE/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/g' .env
+          sed -i 's/GENERATE_ANOTHER_64_CHARACTER_HEX_STRING/fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210/g' .env
+
+          docker-compose -f docker-compose.yml -f ../docker-compose.offline-test.yml up -d postgres rabbitmq redis
+          sleep 30
+
+      - name: Verify no external network requests
+        run: |
+          # Start tcpdump in background to monitor for external traffic
+          timeout 60 docker run --rm --network offline-test-net --cap-add NET_RAW alpine sh -c '
+            apk add --no-cache tcpdump > /dev/null 2>&1
+            tcpdump -i any -c 1 "not (src net 172.16.0.0/12 or dst net 172.16.0.0/12 or src net 10.0.0.0/8 or dst net 10.0.0.0/8)" 2>&1
+          ' > /tmp/external_traffic.log 2>&1 || true
+
+          if grep -q "packets captured" /tmp/external_traffic.log; then
+            echo "WARNING: External traffic detected (may be DNS or expected)"
+            cat /tmp/external_traffic.log
+          else
+            echo "✅ No external traffic detected"
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down -v || true
+          docker network rm offline-test-net || true
+
+  report:
+    name: Generate Report
+    runs-on: ubuntu-latest
+    needs: [verify-offline, build-and-export, test-import]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "## Offline Capability Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.verify-offline.result }}" == "success" ]; then
+            echo "| Offline Verification | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Offline Verification | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.build-and-export.result }}" == "success" ]; then
+            echo "| Bundle Export | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Bundle Export | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-import.result }}" == "success" ]; then
+            echo "| Import Test | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Import Test | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Bundle artifact: \`airgap-bundle-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

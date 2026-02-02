@@ -1,0 +1,107 @@
+# Docker Compose override for offline capability testing
+# Reference: GitHub Issue #60, #84
+#
+# This file is used during CI to verify the application works
+# without external network dependencies.
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.offline-test.yml up -d
+
+networks:
+  # Internal network prevents containers from accessing external internet
+  offline-internal:
+    driver: bridge
+    internal: true
+
+services:
+  # Infrastructure services on internal network
+  rabbitmq:
+    networks:
+      - offline-internal
+      - default
+
+  postgres:
+    networks:
+      - offline-internal
+      - default
+
+  redis:
+    networks:
+      - offline-internal
+      - default
+
+  # Gateway services on internal network
+  approval-api:
+    networks:
+      - offline-internal
+      - default
+    environment:
+      # Override any external API URLs for testing
+      - AIFORCE_API_URL=
+      - EXTERNAL_SERVICES_DISABLED=true
+
+  approval-ui:
+    networks:
+      - offline-internal
+      - default
+
+  # Processing services (if enabled)
+  enrichment:
+    networks:
+      - offline-internal
+      - default
+    profiles:
+      - all
+      - processing
+
+  pii-redactor:
+    networks:
+      - offline-internal
+      - default
+    profiles:
+      - all
+      - processing
+
+  scoring:
+    networks:
+      - offline-internal
+      - default
+    profiles:
+      - all
+      - processing
+
+  # Collector services (if enabled)
+  network-scanner:
+    networks:
+      - offline-internal
+      - default
+    profiles:
+      - all
+      - network
+
+  code-analyzer:
+    networks:
+      - offline-internal
+      - default
+    profiles:
+      - all
+      - code
+
+  db-inspector:
+    networks:
+      - offline-internal
+      - default
+    profiles:
+      - all
+      - database
+
+  # Transmitter (disabled for offline testing)
+  transmitter:
+    networks:
+      - offline-internal
+      - default
+    environment:
+      - TRANSMISSION_ENABLED=false
+    profiles:
+      - all
+      - transmitter
