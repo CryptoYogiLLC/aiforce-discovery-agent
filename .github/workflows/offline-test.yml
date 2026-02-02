@@ -13,7 +13,7 @@ on:
       - "gateway/**"
       - "collectors/**"
       - "processing/**"
-      - "docker-compose*.yml"
+      - "docker compose*.yml"
       - "Dockerfile*"
       - "scripts/**"
       - ".github/workflows/offline-test.yml"
@@ -23,7 +23,7 @@ on:
       - "gateway/**"
       - "collectors/**"
       - "processing/**"
-      - "docker-compose*.yml"
+      - "docker compose*.yml"
       - "Dockerfile*"
       - "scripts/**"
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker-compose build --parallel
+          docker compose build --parallel
 
       - name: Create air-gap bundle
         run: |
@@ -151,7 +151,7 @@ jobs:
           sed -i 's/GENERATE_ANOTHER_64_CHARACTER_HEX_STRING/fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210/g' .env
 
           # Start infrastructure services
-          docker-compose up -d postgres rabbitmq redis
+          docker compose up -d postgres rabbitmq redis
 
           # Wait for infrastructure
           sleep 30
@@ -159,13 +159,13 @@ jobs:
       - name: Check service health
         working-directory: discovery-agent
         run: |
-          docker-compose ps
+          docker compose ps
 
           # Check PostgreSQL
-          docker-compose exec -T postgres pg_isready || echo "PostgreSQL not ready"
+          docker compose exec -T postgres pg_isready || echo "PostgreSQL not ready"
 
           # Check RabbitMQ
-          docker-compose exec -T rabbitmq rabbitmqctl status || echo "RabbitMQ not ready"
+          docker compose exec -T rabbitmq rabbitmqctl status || echo "RabbitMQ not ready"
 
   network-isolation-test:
     name: Test Network Isolation
@@ -199,7 +199,7 @@ jobs:
           sed -i 's/GENERATE_A_64_CHARACTER_HEX_STRING_HERE/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/g' .env
           sed -i 's/GENERATE_ANOTHER_64_CHARACTER_HEX_STRING/fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210/g' .env
 
-          docker-compose -f docker-compose.yml -f ../docker-compose.offline-test.yml up -d postgres rabbitmq redis
+          docker compose -f docker compose.yml -f ../docker compose.offline-test.yml up -d postgres rabbitmq redis
           sleep 30
 
       - name: Verify no external network requests
@@ -220,7 +220,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v || true
+          docker compose down -v || true
           docker network rm offline-test-net || true
 
   report:
