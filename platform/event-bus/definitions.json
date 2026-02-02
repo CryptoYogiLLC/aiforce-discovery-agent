@@ -1,0 +1,305 @@
+{
+  "users": [
+    {
+      "name": "discovery",
+      "password_hash": "6p2+vVpjUa+ebZrQ+cotZo2Zjdp+vpBppwsN+Esea17HI1ti",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "discovery",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "discovery.events",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "processing.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "gateway.events",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "discovery.dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "enrichment.server.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.enrichment.server"
+      }
+    },
+    {
+      "name": "enrichment.repository.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.enrichment.repository"
+      }
+    },
+    {
+      "name": "enrichment.database.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.enrichment.database"
+      }
+    },
+    {
+      "name": "redactor.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.redactor"
+      }
+    },
+    {
+      "name": "scoring.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.scoring"
+      }
+    },
+    {
+      "name": "approval.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.approval"
+      }
+    },
+    {
+      "name": "transmitter.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "discovery.dlx",
+        "x-dead-letter-routing-key": "dlq.transmitter"
+      }
+    },
+    {
+      "name": "dlq.enrichment.server",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.enrichment.repository",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.enrichment.database",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.redactor",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.scoring",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.approval",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlq.transmitter",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "discovery.events",
+      "vhost": "/",
+      "destination": "processing.events",
+      "destination_type": "exchange",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "processing.events",
+      "vhost": "/",
+      "destination": "enrichment.server.queue",
+      "destination_type": "queue",
+      "routing_key": "discovered.server",
+      "arguments": {}
+    },
+    {
+      "source": "processing.events",
+      "vhost": "/",
+      "destination": "enrichment.repository.queue",
+      "destination_type": "queue",
+      "routing_key": "discovered.repository",
+      "arguments": {}
+    },
+    {
+      "source": "processing.events",
+      "vhost": "/",
+      "destination": "enrichment.database.queue",
+      "destination_type": "queue",
+      "routing_key": "discovered.database",
+      "arguments": {}
+    },
+    {
+      "source": "processing.events",
+      "vhost": "/",
+      "destination": "redactor.queue",
+      "destination_type": "queue",
+      "routing_key": "enriched.*",
+      "arguments": {}
+    },
+    {
+      "source": "processing.events",
+      "vhost": "/",
+      "destination": "scoring.queue",
+      "destination_type": "queue",
+      "routing_key": "redacted.*",
+      "arguments": {}
+    },
+    {
+      "source": "processing.events",
+      "vhost": "/",
+      "destination": "approval.queue",
+      "destination_type": "queue",
+      "routing_key": "scored.*",
+      "arguments": {}
+    },
+    {
+      "source": "gateway.events",
+      "vhost": "/",
+      "destination": "transmitter.queue",
+      "destination_type": "queue",
+      "routing_key": "approved.batch",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.enrichment.server",
+      "destination_type": "queue",
+      "routing_key": "dlq.enrichment.server",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.enrichment.repository",
+      "destination_type": "queue",
+      "routing_key": "dlq.enrichment.repository",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.enrichment.database",
+      "destination_type": "queue",
+      "routing_key": "dlq.enrichment.database",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.redactor",
+      "destination_type": "queue",
+      "routing_key": "dlq.redactor",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.scoring",
+      "destination_type": "queue",
+      "routing_key": "dlq.scoring",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.approval",
+      "destination_type": "queue",
+      "routing_key": "dlq.approval",
+      "arguments": {}
+    },
+    {
+      "source": "discovery.dlx",
+      "vhost": "/",
+      "destination": "dlq.transmitter",
+      "destination_type": "queue",
+      "routing_key": "dlq.transmitter",
+      "arguments": {}
+    }
+  ]
+}
