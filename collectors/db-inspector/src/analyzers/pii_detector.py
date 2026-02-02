@@ -75,11 +75,12 @@ class PIIDetector:
             r"born",
         ],
         "ip_address": [
-            r"ip",
+            r"^ip$",  # Exact match only
             r"ip_address",
             r"ipaddr",
             r"client_ip",
             r"remote_addr",
+            r"_ip$",  # Ends with _ip
         ],
         "passport": [
             r"passport",
@@ -94,16 +95,22 @@ class PIIDetector:
         ],
     }
 
-    # Data patterns for PII detection
+    # Data patterns for PII detection - ordered by specificity
+    # SSN must come before phone as SSN format can match phone patterns
     DATA_PATTERNS: dict[str, re.Pattern] = {
         "email": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
-        "phone": re.compile(r"^[\+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]{7,15}$"),
-        "ssn": re.compile(r"^\d{3}[-\s]?\d{2}[-\s]?\d{4}$"),
-        "credit_card": re.compile(
-            r"^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$"
-        ),
+        # SSN: exactly 3 digits, dash, 2 digits, dash, 4 digits
+        "ssn": re.compile(r"^\d{3}-\d{2}-\d{4}$"),
+        # IP address before phone
         "ip_address": re.compile(
             r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+        ),
+        # Phone pattern - must have parentheses or + prefix, or spaces/dashes with longer segments
+        "phone": re.compile(
+            r"^(?:\+\d{1,4}[-\s]?)?(?:\(\d{1,4}\)[-\s]?)?\d{3}[-\s\.]\d{3}[-\s\.]\d{4}$"
+        ),
+        "credit_card": re.compile(
+            r"^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})$"
         ),
         "zip_code": re.compile(r"^\d{5}(?:[-\s]\d{4})?$"),
     }
@@ -148,10 +155,25 @@ class PIIDetector:
             return []
 
         findings: List[Tuple[str, float]] = []
+        matched_values: set = set()  # Track values already matched to avoid duplicates
 
+        # Process patterns in order (ip_address before phone due to ordering)
         for pii_type, pattern in self.DATA_PATTERNS.items():
-            matches = sum(1 for v in values if pattern.match(v.strip()))
+            unmatched_values = [v for v in values if v not in matched_values]
+            if not unmatched_values:
+                continue
+
+            matches = 0
+            newly_matched = []
+            for v in unmatched_values:
+                if pattern.match(v.strip()):
+                    matches += 1
+                    newly_matched.append(v)
+
             if matches > 0:
+                # Mark values as matched to prevent double-counting
+                matched_values.update(newly_matched)
+
                 # Calculate confidence based on match rate
                 match_rate = matches / len(values)
                 if match_rate >= 0.8:

@@ -192,6 +192,9 @@ async def inspect_database(request: DatabaseConnectionRequest) -> InspectionResp
         finally:
             await connector.close()
 
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (preserve status code)
+        raise
     except Exception as e:
         logger.error(f"Database inspection failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
