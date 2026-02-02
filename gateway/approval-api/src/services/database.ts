@@ -1,12 +1,13 @@
-import { Pool, PoolClient } from "pg";
+import { Pool, PoolClient, QueryResult } from "pg";
 import { config } from "../config";
 import { logger } from "./logger";
 
-class Database {
-  private pool: Pool | null = null;
+// Shared pool instance for direct access
+let sharedPool: Pool | null = null;
 
-  async connect(): Promise<void> {
-    this.pool = new Pool({
+function getPool(): Pool {
+  if (!sharedPool) {
+    sharedPool = new Pool({
       host: config.database.host,
       port: config.database.port,
       user: config.database.user,
@@ -15,23 +16,29 @@ class Database {
       ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
       max: config.database.poolSize,
     });
+  }
+  return sharedPool;
+}
 
+class Database {
+  async connect(): Promise<void> {
+    const pool = getPool();
     // Test connection
-    const client = await this.pool.connect();
+    const client = await pool.connect();
     client.release();
   }
 
   async disconnect(): Promise<void> {
-    if (this.pool) {
-      await this.pool.end();
-      this.pool = null;
+    if (sharedPool) {
+      await sharedPool.end();
+      sharedPool = null;
     }
   }
 
   async isHealthy(): Promise<boolean> {
-    if (!this.pool) return false;
+    if (!sharedPool) return false;
     try {
-      const client = await this.pool.connect();
+      const client = await sharedPool.connect();
       await client.query("SELECT 1");
       client.release();
       return true;
@@ -41,18 +48,18 @@ class Database {
   }
 
   async query<T>(sql: string, params?: unknown[]): Promise<T[]> {
-    if (!this.pool) throw new Error("Database not connected");
-    const result = await this.pool.query(sql, params);
+    const pool = getPool();
+    const result = await pool.query(sql, params);
     return result.rows;
   }
 
   async getClient(): Promise<PoolClient> {
-    if (!this.pool) throw new Error("Database not connected");
-    return this.pool.connect();
+    const pool = getPool();
+    return pool.connect();
   }
 
   async migrate(): Promise<void> {
-    if (!this.pool) throw new Error("Database not connected");
+    const pool = getPool();
 
     const migrations = [
       // Create schema
@@ -74,9 +81,12 @@ class Database {
 
       // Audit log table
       `CREATE TABLE IF NOT EXISTS gateway.audit_log (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         discovery_id UUID REFERENCES gateway.discoveries(id) ON DELETE CASCADE,
-        action VARCHAR(50) NOT NULL,
+        event_type VARCHAR(100) NOT NULL,
+        event_category VARCHAR(50) DEFAULT 'discovery',
+        action VARCHAR(50),
+        actor_id UUID,
         actor VARCHAR(100),
         details JSONB,
         created_at TIMESTAMP DEFAULT NOW()
@@ -89,7 +99,7 @@ class Database {
       `CREATE INDEX IF NOT EXISTS idx_audit_discovery ON gateway.audit_log(discovery_id);`,
     ];
 
-    const client = await this.pool.connect();
+    const client = await pool.connect();
     try {
       for (const sql of migrations) {
         await client.query(sql);
@@ -102,3 +112,11 @@ class Database {
 }
 
 export const db = new Database();
+
+// Export pool for direct access (used by session/user services)
+export const pool = {
+  query: async (sql: string, params?: unknown[]): Promise<QueryResult> => {
+    const p = getPool();
+    return p.query(sql, params);
+  },
+};

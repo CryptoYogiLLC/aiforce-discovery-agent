@@ -1,17 +1,27 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { config } from "./config";
 import { logger } from "./services/logger";
 import { db } from "./services/database";
 import { consumer } from "./services/consumer";
 import { discoveryRoutes } from "./routes/discoveries";
 import { auditRoutes } from "./routes/audit";
+import authRoutes from "./routes/auth";
+import usersRoutes from "./routes/users";
+import { runMigrations } from "./db/migrate";
 
 const app = express();
 
 // Middleware
-app.use(cors({ origin: config.cors.origin }));
+app.use(
+  cors({
+    origin: config.cors.origin,
+    credentials: true, // Required for httpOnly cookies
+  }),
+);
 app.use(express.json());
+app.use(cookieParser());
 
 // Health endpoints
 app.get("/health", (req, res) => {
@@ -31,6 +41,8 @@ app.get("/ready", async (req, res) => {
 });
 
 // API routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", usersRoutes);
 app.use("/api/discoveries", discoveryRoutes);
 app.use("/api/audit", auditRoutes);
 
@@ -54,8 +66,8 @@ async function start() {
     await db.connect();
     logger.info("Database connected");
 
-    // Run migrations
-    await db.migrate();
+    // Run migrations (includes RBAC tables)
+    await runMigrations();
     logger.info("Database migrations complete");
 
     // Start RabbitMQ consumer
