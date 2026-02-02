@@ -39,12 +39,17 @@ APP_SERVERS = [
     {"image": "node:20-slim", "ports": ["3000"], "name": "express", "lang": "node"},
     {"image": "node:20-slim", "ports": ["3000"], "name": "nextjs", "lang": "node"},
     {
-        "image": "openjdk:17-slim",
+        "image": "eclipse-temurin:17-jdk-alpine",
         "ports": ["8080"],
         "name": "springboot",
         "lang": "java",
     },
-    {"image": "openjdk:17-slim", "ports": ["8080"], "name": "quarkus", "lang": "java"},
+    {
+        "image": "eclipse-temurin:17-jdk-alpine",
+        "ports": ["8080"],
+        "name": "quarkus",
+        "lang": "java",
+    },
     {
         "image": "mcr.microsoft.com/dotnet/aspnet:8.0",
         "ports": ["5000"],
@@ -213,11 +218,12 @@ def generate_environment():
     services = {}
 
     # Randomly select counts
-    num_web_servers = random.randint(1, 3)
-    num_app_servers = random.randint(2, 5)
-    num_databases = random.randint(2, 5)
-    num_queues = random.randint(0, 2)
-    num_infra = random.randint(0, 3)
+    # Reduced counts for development/testing to minimize disk usage
+    num_web_servers = random.randint(1, 2)
+    num_app_servers = random.randint(1, 2)
+    num_databases = random.randint(1, 2)
+    num_queues = random.randint(0, 1)
+    num_infra = random.randint(0, 1)
 
     port_offset = 0
 

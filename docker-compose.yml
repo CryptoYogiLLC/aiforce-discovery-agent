@@ -95,15 +95,19 @@ services:
       dockerfile: Dockerfile
     container_name: discovery-network-scanner
     profiles: ["network", "all"]
-    network_mode: host # Required for network scanning
+    # Note: network_mode: host is needed for production scanning but doesn't work
+    # on Docker Desktop for Mac. Using bridge networks for local development.
     environment:
-      # Use host port since network_mode: host bypasses Docker network
-      # SCANNER_ prefix required by viper config
-      SCANNER_RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@localhost:${RABBITMQ_PORT:-5674}/
-      SCANNER_LOGGING_LEVEL: ${LOG_LEVEL:-info}
+      SCANNER_RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      SCANNER_LOGGING_LEVEL: debug
+      SCANNER_SCANNER_SUBNETS: "172.28.0.0/24"
+      SCANNER_SCANNER_PORT_RANGES: ""
+      SCANNER_SCANNER_COMMON_PORTS: "22,80,443,3000,3306,5000,5432,6379,8000,8080,9000,9090,11211,27017"
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - discovery-network
     restart: unless-stopped
 
   code-analyzer:

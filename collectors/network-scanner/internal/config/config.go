@@ -96,7 +96,7 @@ func setDefaults(v *viper.Viper) {
 	// Scanner defaults
 	v.SetDefault("scanner.subnets", []string{})
 	v.SetDefault("scanner.exclude_subnets", []string{})
-	v.SetDefault("scanner.port_ranges", []string{"1-1024"})
+	v.SetDefault("scanner.port_ranges", []string{})
 	v.SetDefault("scanner.common_ports", []int{
 		22, 80, 443, 3306, 5432, 6379, 8080, 8443, 27017,
 	})

@@ -132,8 +132,8 @@ func (p *Publisher) PublishServiceDiscovered(result interface{}) error {
 		}
 	}
 
-	event := p.createEvent("discovery.service.discovered", data)
-	return p.publish(event, "discovered.service")
+	event := p.createEvent("discovery.server.discovered", data)
+	return p.publish(event, "discovered.server")
 }
 
 func (p *Publisher) createEvent(eventType string, data interface{}) CloudEvent {
