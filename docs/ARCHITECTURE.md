@@ -631,6 +631,6 @@ See [SECURITY.md](../SECURITY.md) for full details.
 | **Frontend**         | React + Vite                  | 18+, 5+            |
 | **Message Broker**   | RabbitMQ                      | 3.12+              |
 | **Database**         | PostgreSQL (pgvector), SQLite | 17+, 3.40+         |
-| **Cache**            | Redis                         | 7+                 |
+| **Cache**            | Redis                         | 8+                 |
 | **Containers**       | Docker                        | 24+                |
 | **Orchestration**    | Docker Compose, Kubernetes    | 2.20+, 1.28+       |
