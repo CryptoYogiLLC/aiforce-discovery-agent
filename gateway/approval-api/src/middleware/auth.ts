@@ -210,8 +210,9 @@ export function optionalAuth(
       }
       next();
     })
-    .catch(() => {
-      // Ignore errors for optional auth
+    .catch((err) => {
+      // Log errors but still proceed since auth is optional
+      logger.error("Optional auth failed", { error: (err as Error).message });
       next();
     });
 }

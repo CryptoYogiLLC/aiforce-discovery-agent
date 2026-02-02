@@ -41,16 +41,14 @@ const HEALTH_CHECK_TIMEOUT = 5000;
 async function checkServiceHealth(
   service: ServiceDefinition,
 ): Promise<ServiceHealth> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT);
 
+  try {
     const response = await fetch(
       `http://${service.host}:${service.port}${service.health_endpoint}`,
       { signal: controller.signal },
     );
-
-    clearTimeout(timeout);
 
     if (response.ok) {
       const data = (await response.json()) as { uptime?: number };
@@ -87,6 +85,8 @@ async function checkServiceHealth(
       last_check_at: new Date(),
       error_message: error.message,
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
