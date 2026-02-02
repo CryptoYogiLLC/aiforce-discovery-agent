@@ -23,11 +23,33 @@ import {
 import { logger } from "./logger";
 
 /**
+ * Recursively sort object keys for canonical JSON representation
+ */
+function deepSortObject(obj: unknown): unknown {
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(deepSortObject);
+  }
+
+  const sorted: Record<string, unknown> = {};
+  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  for (const key of keys) {
+    sorted[key] = deepSortObject((obj as Record<string, unknown>)[key]);
+  }
+  return sorted;
+}
+
+/**
  * Compute SHA-256 hash of canonical JSON
+ * Uses deep sort to ensure consistent hashing regardless of key order
  */
 function computeHash(data: Record<string, unknown>): string {
-  // Canonical JSON: sorted keys, no extra whitespace
-  const canonical = JSON.stringify(data, Object.keys(data).sort());
+  // Canonical JSON: recursively sorted keys, no extra whitespace
+  const sortedData = deepSortObject(data);
+  const canonical = JSON.stringify(sortedData);
   return crypto.createHash("sha256").update(canonical).digest("hex");
 }
 

@@ -319,8 +319,12 @@ export async function exportHandler(
   }
 
   try {
+    // Sanitize batch_ids: trim whitespace and filter empty strings
     const batchIds = req.query.batch_ids
-      ? (req.query.batch_ids as string).split(",")
+      ? (req.query.batch_ids as string)
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id.length > 0)
       : undefined;
 
     const exportData = await generateComplianceExport({
