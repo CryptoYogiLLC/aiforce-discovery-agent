@@ -3,6 +3,7 @@
  * Reference: ADR-003 Session Security Model, GitHub Issue #63
  */
 
+import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { getSessionWithUser } from "../services/sessionService";
 import { UserPublic, UserRole, hasRoleLevel } from "../models/user";
@@ -56,11 +57,11 @@ export function authenticate(
 /**
  * CSRF validation middleware - for state-changing requests (POST, PUT, DELETE)
  */
-export async function validateCsrf(
+export function validateCsrf(
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<void> {
+): void {
   // Skip CSRF for safe methods
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
     next();
@@ -69,8 +70,22 @@ export async function validateCsrf(
 
   const csrfHeader = req.headers[SESSION_CONFIG.CSRF_HEADER] as string;
 
-  if (!csrfHeader || csrfHeader !== req.csrfToken) {
-    await logAuthEvent(req, "csrf_validation_failed", false);
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const csrfToken = req.csrfToken || "";
+    const clientToken = Buffer.from(csrfHeader || "");
+    const serverToken = Buffer.from(csrfToken);
+
+    if (
+      clientToken.length !== serverToken.length ||
+      !crypto.timingSafeEqual(clientToken, serverToken)
+    ) {
+      logAuthEvent(req, "csrf_validation_failed", false);
+      res.status(403).json({ error: "Invalid CSRF token" });
+      return;
+    }
+  } catch {
+    logAuthEvent(req, "csrf_validation_failed", false);
     res.status(403).json({ error: "Invalid CSRF token" });
     return;
   }

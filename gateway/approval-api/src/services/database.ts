@@ -119,4 +119,8 @@ export const pool = {
     const p = getPool();
     return p.query(sql, params);
   },
+  connect: async (): Promise<PoolClient> => {
+    const p = getPool();
+    return p.connect();
+  },
 };

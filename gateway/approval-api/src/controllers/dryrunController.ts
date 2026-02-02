@@ -127,7 +127,7 @@ export async function startSessionHandler(
     logger.error("Failed to start dry-run session", {
       error: (err as Error).message,
     });
-    res.status(500).json({ error: (err as Error).message });
+    res.status(500).json({ error: "Failed to start dry-run session" });
   }
 }
 
@@ -471,6 +471,19 @@ export async function addDiscoveryHandler(
   }
 
   try {
+    // Validate session exists and is in valid state for adding discoveries
+    const session = await getSessionById(req.body.session_id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    if (!["generating", "running"].includes(session.status)) {
+      res.status(400).json({
+        error: `Cannot add discovery when session status is ${session.status}`,
+      });
+      return;
+    }
+
     const discovery = await addDiscovery(
       req.body.session_id,
       req.body.source,

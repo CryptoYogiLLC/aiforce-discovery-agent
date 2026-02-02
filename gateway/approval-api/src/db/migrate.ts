@@ -111,6 +111,10 @@ async function seedDefaultAdmin(): Promise<void> {
     "SELECT id, password_hash FROM gateway.users WHERE username = 'admin'",
   );
 
+  // Placeholder hash used in migration file
+  const placeholderHash =
+    "$argon2id$v=19$m=65536,t=3,p=4$placeholder$placeholder";
+
   if (result.rows.length === 0) {
     // Admin doesn't exist, create it
     const passwordHash = await argon2.hash(defaultPassword, {
@@ -126,24 +130,25 @@ async function seedDefaultAdmin(): Promise<void> {
       [passwordHash],
     );
     logger.info("Default admin user created");
-  } else if (
-    (
-      (result.rows[0] as Record<string, unknown>).password_hash as string
-    ).includes("placeholder")
-  ) {
-    // Update placeholder hash with real one
-    const passwordHash = await argon2.hash(defaultPassword, {
-      type: argon2.argon2id,
-      memoryCost: 65536,
-      timeCost: 3,
-      parallelism: 4,
-    });
+  } else {
+    const storedHash = (result.rows[0] as Record<string, unknown>)
+      .password_hash as string;
 
-    await pool.query(
-      "UPDATE gateway.users SET password_hash = $1 WHERE username = 'admin'",
-      [passwordHash],
-    );
-    logger.info("Default admin password hash updated");
+    if (storedHash === placeholderHash) {
+      // Update placeholder hash with real one
+      const passwordHash = await argon2.hash(defaultPassword, {
+        type: argon2.argon2id,
+        memoryCost: 65536,
+        timeCost: 3,
+        parallelism: 4,
+      });
+
+      await pool.query(
+        "UPDATE gateway.users SET password_hash = $1 WHERE username = 'admin'",
+        [passwordHash],
+      );
+      logger.info("Default admin password hash updated");
+    }
   }
 }
 

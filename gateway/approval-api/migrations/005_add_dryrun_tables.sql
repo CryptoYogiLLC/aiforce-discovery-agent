@@ -2,6 +2,9 @@
 -- Description: Add dry-run session and discovery tables (data partitioning)
 -- Reference: ADR-004 Dry-Run Orchestration Model, ADR-006 Dry-Run Data Partitioning, GitHub Issue #57
 
+-- Ensure pgcrypto extension is available for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Dry-run session status enum
 DO $$ BEGIN
     CREATE TYPE gateway.dryrun_session_status AS ENUM (

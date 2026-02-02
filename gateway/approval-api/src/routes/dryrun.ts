@@ -120,13 +120,15 @@ router.post(
 
 /**
  * Internal endpoints (for orchestrator callbacks)
- * These are called by internal services, not exposed to UI
- * TODO: Add internal service authentication (API key or mTLS)
+ * These require authentication with operator role for security
+ * TODO: Consider adding API key or mTLS for service-to-service auth
  */
 
 // POST /api/dryrun/internal/discoveries - Add discovery
 router.post(
   "/internal/discoveries",
+  authenticate,
+  requireRole("operator"),
   addDiscoveryValidation,
   addDiscoveryHandler,
 );
@@ -134,6 +136,8 @@ router.post(
 // POST /api/dryrun/internal/containers - Register container
 router.post(
   "/internal/containers",
+  authenticate,
+  requireRole("operator"),
   registerContainerValidation,
   registerContainerHandler,
 );
@@ -141,6 +145,8 @@ router.post(
 // POST /api/dryrun/internal/sessions/:id/complete - Mark completed
 router.post(
   "/internal/sessions/:id/complete",
+  authenticate,
+  requireRole("operator"),
   completeSessionValidation,
   completeSessionHandler,
 );
