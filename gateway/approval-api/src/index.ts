@@ -9,6 +9,7 @@ import { discoveryRoutes } from "./routes/discoveries";
 import { auditRoutes } from "./routes/audit";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
+import profilesRoutes from "./routes/profiles";
 import { runMigrations } from "./db/migrate";
 
 const app = express();
@@ -43,6 +44,7 @@ app.get("/ready", async (req, res) => {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/profiles", profilesRoutes);
 app.use("/api/discoveries", discoveryRoutes);
 app.use("/api/audit", auditRoutes);
 
