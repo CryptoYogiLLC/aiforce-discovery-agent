@@ -18,7 +18,6 @@ import {
 import {
   authenticate,
   validateCsrf,
-  requireRole,
   requirePermission,
   logAuthEvent,
 } from "../middleware/auth";
@@ -27,15 +26,16 @@ import { logger } from "../services/logger";
 
 const router = Router();
 
-// All user management routes require authentication and admin role
+// All user management routes require authentication
+// Authorization is handled per-route via requirePermission for flexibility
 router.use(authenticate);
-router.use(requireRole("admin"));
 
 /**
  * GET /api/users - List all users
  */
 router.get(
   "/",
+  requirePermission("users.read"),
   [
     query("page").optional().isInt({ min: 1 }).toInt(),
     query("limit").optional().isInt({ min: 1, max: 100 }).toInt(),
@@ -72,6 +72,7 @@ router.get(
  */
 router.get(
   "/:id",
+  requirePermission("users.read"),
   [param("id").isUUID()],
   async (req: Request, res: Response): Promise<void> => {
     const errors = validationResult(req);
