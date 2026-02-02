@@ -176,8 +176,16 @@ if [ -d "gateway/approval-ui" ]; then
             # - data:/blob:: inline data URIs
             # - reactjs.org: React's error decoder URL embedded in minified bundles (not a runtime dependency)
             # - w3.org: XML/HTML/SVG namespace URIs (e.g., http://www.w3.org/1999/xhtml) - identifiers, not fetched
-            if grep -rE 'https?://' dist/ --include='*.js' --include='*.css' --include='*.html' 2>/dev/null | \
-               grep -vE '(localhost|127\.0\.0\.1|data:|blob:|reactjs\.org|w3\.org)' | head -5; then
+
+            # Debug: Show all URLs found before filtering
+            echo "  DEBUG: All URLs in build output:"
+            grep -rEo 'https?://[^"'\''<>[:space:]]+' dist/ --include='*.js' --include='*.css' --include='*.html' 2>/dev/null | sort -u | head -20 || echo "    (none found)"
+
+            EXTERNAL_URLS=$(grep -rE 'https?://' dist/ --include='*.js' --include='*.css' --include='*.html' 2>/dev/null | \
+               grep -vE '(localhost|127\.0\.0\.1|data:|blob:|reactjs\.org|w3\.org)' | head -5)
+
+            if [ -n "$EXTERNAL_URLS" ]; then
+                echo "$EXTERNAL_URLS"
                 error "External URLs found in build output!"
             else
                 success "No external URLs in build output"
