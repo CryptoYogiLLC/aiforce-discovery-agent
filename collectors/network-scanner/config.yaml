@@ -1,0 +1,46 @@
+# Network Scanner Configuration
+
+server:
+  port: 8001
+  read_timeout: 10    # seconds
+  write_timeout: 30   # seconds
+
+scanner:
+  # Subnets to scan (CIDR notation)
+  subnets: []
+  #  - 10.0.0.0/24
+  #  - 192.168.1.0/24
+
+  # Subnets to exclude from scanning
+  exclude_subnets: []
+  #  - 10.0.0.1/32
+
+  # Port ranges to scan
+  port_ranges:
+    - 1-1024
+
+  # Common ports always scanned
+  common_ports:
+    - 22      # SSH
+    - 80      # HTTP
+    - 443     # HTTPS
+    - 3306    # MySQL
+    - 5432    # PostgreSQL
+    - 6379    # Redis
+    - 8080    # HTTP-Alt
+    - 8443    # HTTPS-Alt
+    - 27017   # MongoDB
+
+  # Rate limiting
+  rate_limit: 100     # scans per second
+  timeout: 2000       # connection timeout in milliseconds
+  concurrency: 100    # max concurrent connections
+  enable_udp: false   # UDP scanning (not yet implemented)
+
+rabbitmq:
+  url: amqp://discovery:discovery@localhost:5672/
+  exchange: discovery.events
+
+logging:
+  level: info         # debug, info, warn, error
+  format: json        # json or console
