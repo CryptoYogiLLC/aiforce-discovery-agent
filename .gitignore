@@ -50,10 +50,11 @@ credentials/
 docker-compose.generated.yml
 test-env-manifest.json
 
-# Claude Code (CC) - ignore local state, track shared commands and skills
+# Claude Code (CC) - ignore local state, track shared commands, skills, and prompts
 .claude/*
 !.claude/commands/
 !.claude/skills/
+!.claude/prompts/
 
 # Serena - ignore cache, track memories and templates
 .serena/cache/
