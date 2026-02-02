@@ -40,9 +40,9 @@ services:
     restart: unless-stopped
 
   postgres:
-    # Using pgvector:pg17 for consistency with AIForce-Assess parent project
+    # Using same pgvector image as AIForce-Assess parent project for consistency
     # Enables future vector-based features (embedding search, similarity matching)
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:0.8.1-pg17-trixie
     container_name: discovery-postgres
     ports:
       - "${POSTGRES_PORT:-5434}:5432"
@@ -97,8 +97,10 @@ services:
     profiles: ["network", "all"]
     network_mode: host # Required for network scanning
     environment:
-      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@localhost:5672/
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Use host port since network_mode: host bypasses Docker network
+      # SCANNER_ prefix required by viper config
+      SCANNER_RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@localhost:${RABBITMQ_PORT:-5674}/
+      SCANNER_LOGGING_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -162,7 +164,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8010/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -185,7 +187,11 @@ services:
       - "3001:3001"
     environment:
       RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-discovery}:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-discovery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-discovery}
+      POSTGRES_DB: discovery_agent
       REDIS_URL: redis://redis:6379
       NODE_ENV: ${NODE_ENV:-production}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -197,7 +203,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -213,13 +219,13 @@ services:
     container_name: discovery-approval-ui
     profiles: ["gateway", "all"]
     ports:
-      - "3000:3000"
+      - "3000:80"
     environment:
       VITE_API_URL: http://localhost:3001
     depends_on:
       - approval-api
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -235,15 +241,18 @@ services:
     container_name: discovery-transmitter
     profiles: ["gateway", "all"]
     environment:
-      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
-      AIFORCE_API_URL: ${AIFORCE_API_URL:-https://api.aiforce-assess.com}
-      DISCOVERY_AGENT_TOKEN: ${DISCOVERY_AGENT_TOKEN}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TRANSMITTER_RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      TRANSMITTER_DATABASE_URL: postgresql://${POSTGRES_USER:-discovery}:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      TRANSMITTER_DESTINATION_URL: ${AIFORCE_API_URL:-https://api.aiforce-assess.com}
+      TRANSMITTER_AUTH_TOKEN: ${DISCOVERY_AGENT_TOKEN:-}
+      TRANSMITTER_LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8020/health"]
       interval: 30s
       timeout: 10s
       retries: 3
