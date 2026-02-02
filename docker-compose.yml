@@ -1,14 +1,27 @@
-version: '3.8'
+# =============================================================================
+# AIForce Discovery Agent - Docker Compose Configuration
+# =============================================================================
+# Usage:
+#   docker-compose up -d                    # Start core infrastructure
+#   docker-compose --profile network up -d  # Include network scanner
+#   docker-compose --profile database up -d # Include database inspector
+#   docker-compose --profile code up -d     # Include code analyzer (Phase 2)
+#   docker-compose --profile all up -d      # Start everything
+#   docker-compose down                     # Stop all services
+#   docker-compose down -v                  # Stop and remove volumes
+# =============================================================================
 
 services:
   # =============================================================================
   # INFRASTRUCTURE
+  # These services start by default with `docker-compose up -d`
   # =============================================================================
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: discovery-rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5674}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15674}:15672"
     environment:
       RABBITMQ_DEFAULT_USER: discovery
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-discovery}
@@ -21,11 +34,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   postgres:
     image: postgres:16
+    container_name: discovery-postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5434}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-discovery}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-discovery}
@@ -33,118 +51,217 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: pg_isready -U discovery
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-discovery} -d discovery_agent"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
+    container_name: discovery-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6381}:6379"
     volumes:
       - redis_data:/data
-
-  # =============================================================================
-  # CORE SERVICES
-  # =============================================================================
-  config-service:
-    build: ./platform/config-service
-    environment:
-      - CONFIG_PATH=/config/discovery-agent.yaml
-    volumes:
-      - ./config:/config:ro
-    depends_on:
-      - rabbitmq
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   # =============================================================================
   # COLLECTORS (use profiles to enable)
+  # Start with: docker-compose --profile <profile> up -d
   # =============================================================================
   network-scanner:
-    build: ./collectors/network-scanner
+    build:
+      context: ./collectors/network-scanner
+      dockerfile: Dockerfile
+    container_name: discovery-network-scanner
     profiles: ["network", "all"]
     network_mode: host  # Required for network scanning
     environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@localhost:5672/
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@localhost:5672/
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
-      - rabbitmq
-      - config-service
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
 
   code-analyzer:
-    build: ./collectors/code-analyzer
+    build:
+      context: ./collectors/code-analyzer
+      dockerfile: Dockerfile
+    container_name: discovery-code-analyzer
     profiles: ["code", "all"]
     environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # For container inspection
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - code_repos:/repos:ro
     depends_on:
-      - rabbitmq
-      - config-service
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   db-inspector:
-    build: ./collectors/db-inspector
+    build:
+      context: ./collectors/db-inspector
+      dockerfile: Dockerfile
+    container_name: discovery-db-inspector
     profiles: ["database", "all"]
     environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
-      - rabbitmq
-      - config-service
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   # =============================================================================
-  # PROCESSING
+  # PROCESSING PIPELINE
+  # Unified processor handles enrichment, PII redaction, and scoring
   # =============================================================================
-  enrichment:
-    build: ./platform/enrichment
+  processor:
+    build:
+      context: ./platform/processor
+      dockerfile: Dockerfile
+    container_name: discovery-processor
+    profiles: ["processor", "all"]
     environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
-      - POSTGRES_URL=postgresql://discovery:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-discovery}:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
-      - rabbitmq
-      - postgres
-
-  pii-redactor:
-    build: ./platform/pii-redactor
-    environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
-    depends_on:
-      - rabbitmq
-      - enrichment
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   # =============================================================================
   # GATEWAY
+  # Approval UI and API for reviewing discovered items
   # =============================================================================
   approval-api:
-    build: ./gateway/approval-api
+    build:
+      context: ./gateway/approval-api
+      dockerfile: Dockerfile
+    container_name: discovery-approval-api
+    profiles: ["gateway", "all"]
     ports:
       - "3001:3001"
     environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
-      - POSTGRES_URL=postgresql://discovery:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
-      - REDIS_URL=redis://redis:6379
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-discovery}:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
-      - rabbitmq
-      - postgres
-      - redis
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   approval-ui:
-    build: ./gateway/approval-ui
+    build:
+      context: ./gateway/approval-ui
+      dockerfile: Dockerfile
+    container_name: discovery-approval-ui
+    profiles: ["gateway", "all"]
     ports:
       - "3000:3000"
     environment:
-      - API_URL=http://approval-api:3001
+      VITE_API_URL: http://localhost:3001
     depends_on:
       - approval-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
   transmitter:
-    build: ./gateway/transmitter
+    build:
+      context: ./gateway/transmitter
+      dockerfile: Dockerfile
+    container_name: discovery-transmitter
+    profiles: ["gateway", "all"]
     environment:
-      - RABBITMQ_URL=amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
-      - DISCOVERY_AGENT_TOKEN=${DISCOVERY_AGENT_TOKEN}
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      AIFORCE_API_URL: ${AIFORCE_API_URL:-https://api.aiforce-assess.com}
+      DISCOVERY_AGENT_TOKEN: ${DISCOVERY_AGENT_TOKEN}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
-      - rabbitmq
-      - approval-api
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - discovery-network
+    restart: unless-stopped
 
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  discovery-network:
+    driver: bridge
+    name: discovery-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
 volumes:
   rabbitmq_data:
+    name: discovery-rabbitmq-data
   postgres_data:
+    name: discovery-postgres-data
   redis_data:
+    name: discovery-redis-data
+  code_repos:
+    name: discovery-code-repos
