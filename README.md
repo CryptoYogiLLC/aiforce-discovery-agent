@@ -80,17 +80,17 @@ Existing tools (Device42, Cloudamize, AWS ADS) excel at infrastructure discovery
 │                             │                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │                      PROCESSING TIER                            │   │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │   │
-│  │  │  Enrichment  │ │   PII        │ │  Scoring     │            │   │
-│  │  │  Service     │ │   Redactor   │ │  Service     │            │   │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘            │   │
+│  │  ┌──────────────────────────────────────────────────────────┐  │   │
+│  │  │              Unified Processor (Python)                   │  │   │
+│  │  │     Enrichment → PII Redaction → Complexity Scoring       │  │   │
+│  │  └──────────────────────────────────────────────────────────┘  │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                             │                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │                      GATEWAY TIER                               │   │
 │  │  ┌──────────────────────────┐    ┌──────────────────────────┐  │   │
 │  │  │     Approval Gateway     │    │      Transmitter         │  │   │
-│  │  │     (React Web UI)       │    │   (External API client)  │  │   │
+│  │  │  (React UI + Express)    │    │   (External API client)  │  │   │
 │  │  └──────────────────────────┘    └──────────────────────────┘  │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -168,16 +168,18 @@ See [Configuration Guide](docs/configuration.md) for full options.
 
 ## Microservices Components
 
-| Service                                        | Language | Purpose                            | Status         |
-| ---------------------------------------------- | -------- | ---------------------------------- | -------------- |
-| [Network Scanner](collectors/network-scanner/) | Go       | Discover servers, ports, services  | 🚧 In Progress |
-| [Code Analyzer](collectors/code-analyzer/)     | Python   | Analyze repos, detect dependencies | 🚧 In Progress |
-| [Database Inspector](collectors/db-inspector/) | Python   | Extract schemas, classify data     | 🚧 In Progress |
-| [Event Bus](platform/event-bus/)               | RabbitMQ | Message routing between services   | 🚧 In Progress |
-| [Enrichment Service](platform/enrichment/)     | Python   | Correlate and enrich discoveries   | 🚧 In Progress |
-| [PII Redactor](platform/pii-redactor/)         | Python   | Detect and mask sensitive data     | 🚧 In Progress |
-| [Approval Gateway](gateway/approval-ui/)       | React    | Web UI for review and approval     | 🚧 In Progress |
-| [Transmitter](gateway/transmitter/)            | Python   | Secure external transmission       | 🚧 In Progress |
+| Service                                        | Language   | Purpose                            | Status      |
+| ---------------------------------------------- | ---------- | ---------------------------------- | ----------- |
+| [Network Scanner](collectors/network-scanner/) | Go 1.24    | Discover servers, ports, services  | ✅ Complete |
+| [Code Analyzer](collectors/code-analyzer/)     | Python     | Analyze repos, detect dependencies | ✅ Complete |
+| [Database Inspector](collectors/db-inspector/) | Python     | Extract schemas, detect PII        | ✅ Complete |
+| [Event Bus](platform/event-bus/)               | RabbitMQ   | Message routing between services   | ✅ Complete |
+| [Unified Processor](platform/processor/)       | Python     | Enrich, redact PII, score          | ✅ Complete |
+| [Approval UI](gateway/approval-ui/)            | React/Vite | Web UI for review and approval     | ✅ Complete |
+| [Approval API](gateway/approval-api/)          | Express    | REST API for gateway operations    | ✅ Complete |
+| [Transmitter](gateway/transmitter/)            | Python     | Secure batch transmission          | ✅ Complete |
+
+> **Note**: The processing tier uses a unified processor that combines enrichment, PII redaction, and complexity scoring into a single service for MVP simplicity.
 
 ---
 
@@ -239,20 +241,23 @@ Security is paramount for a tool that accesses sensitive infrastructure.
 
 ## Roadmap
 
-### Phase 1: MVP (Current)
+### Phase 1: MVP ✅ Complete
 
-- [ ] Network Scanner (basic port scanning)
-- [ ] Database Inspector (PostgreSQL, MySQL)
-- [ ] Event Bus + Processing Pipeline
-- [ ] Approval Gateway UI
-- [ ] Docker Compose deployment
+- [x] Network Scanner (TCP/UDP scanning, service fingerprinting, banner grabbing)
+- [x] Database Inspector (PostgreSQL, MySQL schema extraction, PII detection)
+- [x] Code Analyzer (Git repos, 20+ languages, 30+ frameworks, dependency detection)
+- [x] Event Bus (RabbitMQ with CloudEvents, topic-based routing)
+- [x] Unified Processor (enrichment, PII redaction, complexity scoring)
+- [x] Approval Gateway (React UI + Express API)
+- [x] Transmitter (batch transmission with retry, circuit breaker)
+- [x] Docker Compose deployment with profiles
 
-### Phase 2: Extended Discovery
+### Phase 2: Extended Discovery (Current)
 
-- [ ] Code Analyzer (Git repos, dependency detection)
 - [ ] API Tracer (runtime dependency mapping)
 - [ ] CMDB connectors (ServiceNow, Device42)
 - [ ] Kubernetes deployment (Helm charts)
+- [ ] Additional database connectors (Oracle, MongoDB)
 
 ### Phase 3: Advanced Features
 
