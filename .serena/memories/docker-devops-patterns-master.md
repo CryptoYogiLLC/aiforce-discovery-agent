@@ -139,6 +139,71 @@ docker-compose exec network-scanner sh
 
 ---
 
+## Pattern: Configurable Port Mappings (Added 2026-02-01)
+
+**Problem**: Docker services conflict with existing services on standard ports.
+**Context**: Development environment may have multiple projects running.
+
+**Solution**:
+```yaml
+services:
+  rabbitmq:
+    ports:
+      - "${RABBITMQ_PORT:-5674}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15674}:15672"
+
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6381}:6379"
+```
+
+**Why**: Environment variable defaults avoid hardcoded port conflicts while still allowing customization.
+
+**Source**: Session 2026-02-01 / Commit 32bbd4b
+
+---
+
+## Pattern: RabbitMQ Definitions with Password Hash (Added 2026-02-01)
+
+**Problem**: RabbitMQ `load_definitions` ignores `RABBITMQ_DEFAULT_USER/PASS` environment variables.
+**Context**: When mounting definitions.json for exchange/queue setup.
+
+**Solution**: Include user in definitions.json with proper password hash:
+```python
+import hashlib, base64, os
+
+password = 'discovery'
+salt = os.urandom(4)
+hash_input = salt + password.encode('utf-8')
+hash_output = hashlib.sha256(hash_input).digest()
+password_hash = base64.b64encode(salt + hash_output).decode('ascii')
+```
+
+```json
+{
+  "users": [{
+    "name": "discovery",
+    "password_hash": "<generated_hash>",
+    "hashing_algorithm": "rabbit_password_hashing_sha256",
+    "tags": ["administrator"]
+  }],
+  "vhosts": [{"name": "/"}],
+  "permissions": [{...}],
+  "exchanges": [{...}],
+  "queues": [{...}]
+}
+```
+
+**Why**: Definitions override environment-based user creation. Must include vhosts and permissions too.
+
+**Source**: Session 2026-02-01 / Commit ae097a8
+
+---
+
 ## Search Keywords
 
-docker, docker-compose, postgres, volumes, requirements, override, container
+docker, docker-compose, postgres, volumes, requirements, override, container, rabbitmq, port, definitions

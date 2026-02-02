@@ -247,6 +247,63 @@ jsonschema.validate(event.data, schema)
 
 ---
 
+## Pattern: RabbitMQ Exchange Topology (Added 2026-02-01)
+
+**Problem**: Need consistent exchange setup for event-driven processing pipeline.
+**Context**: Discovery Agent event flow from collectors to transmitter.
+
+**Solution**: Use three-tier exchange topology in `definitions.json`:
+
+| Exchange | Type | Purpose |
+|----------|------|---------|
+| `discovery.events` | fanout | Collectors publish here (broadcasts to processing) |
+| `processing.events` | topic | Pipeline routing with `discovered.*`, `enriched.*` etc. |
+| `gateway.events` | direct | Final approved items to transmitter |
+| `discovery.dlx` | direct | Dead letter exchange |
+
+**Binding Strategy**:
+```json
+{
+  "bindings": [
+    {"source": "discovery.events", "destination": "processing.events", "destination_type": "exchange"},
+    {"source": "processing.events", "destination": "enrichment.server.queue", "routing_key": "discovered.server"},
+    {"source": "processing.events", "destination": "redactor.queue", "routing_key": "enriched.*"},
+    {"source": "gateway.events", "destination": "transmitter.queue", "routing_key": "approved.batch"}
+  ]
+}
+```
+
+**Why**: Fanout at entry simplifies collector code. Topic exchange enables flexible routing. Direct for final delivery.
+
+**Source**: Session 2026-02-01 / Commit ae097a8
+
+---
+
+## Pattern: Unified Processor for MVP (Added 2026-02-01)
+
+**Problem**: Running separate enrichment, PII redaction, scoring services adds operational complexity.
+**Context**: MVP deployment where simplicity > scalability.
+
+**Solution**: Single processor service with internal modules:
+```
+discovered.* → [Unified Processor] → scored.*
+                    │
+                    ├── EnrichmentModule.process(data)
+                    ├── PIIRedactorModule.process(data)
+                    └── ScoringModule.process(data)
+```
+
+**Benefits**:
+- Single deployment unit
+- Simpler debugging (all processing in one place)
+- Can split later when operational maturity increases
+
+**Implementation**: See `platform/processor/` - FastAPI with aio-pika consumer/publisher.
+
+**Source**: Session 2026-02-01 / Commit 53ed608, Issue #50
+
+---
+
 ## Search Keywords
 
-events, cloudevents, rabbitmq, queue, dlq, idempotent, event-driven
+events, cloudevents, rabbitmq, queue, dlq, idempotent, event-driven, exchange, topology, processor
