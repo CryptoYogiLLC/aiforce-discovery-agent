@@ -4,6 +4,7 @@ import DiscoveryList from "./pages/DiscoveryList";
 import DiscoveryDetail from "./pages/DiscoveryDetail";
 import DryRunPage from "./pages/DryRunPage";
 import DryRunSessionDetail from "./pages/DryRunSessionDetail";
+import ScanPage from "./pages/ScanPage";
 import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
 
@@ -117,6 +118,7 @@ function AppContent() {
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
               <nav style={{ display: "flex", gap: "0.5rem" }}>
                 <NavLink to="/">Discoveries</NavLink>
+                <NavLink to="/scan">Scan</NavLink>
                 <NavLink to="/dryrun">Dry-Run</NavLink>
                 {hasPermission("user:view") && (
                   <NavLink to="/users">Users</NavLink>
@@ -140,6 +142,14 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<DiscoveryList />} />
           <Route path="/discovery/:id" element={<DiscoveryDetail />} />
+          <Route
+            path="/scan"
+            element={
+              <ProtectedRoute>
+                <ScanPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dryrun"
             element={

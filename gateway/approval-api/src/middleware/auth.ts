@@ -308,3 +308,55 @@ export function optionalAuth(
       next();
     });
 }
+
+/**
+ * Internal API key authentication REQUIRED for scan orchestration callbacks (ADR-007)
+ * Unlike internalApiKeyAuth, this middleware has NO dev bypass - key MUST be configured.
+ * Used by collectors to report progress/completion to approval-api.
+ */
+export function internalApiKeyAuthRequired(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  const apiKey = req.headers["x-internal-api-key"] as string;
+  const expectedKey = process.env.INTERNAL_API_KEY;
+
+  // No dev bypass for scan callbacks - key MUST be configured
+  if (!expectedKey) {
+    logger.error(
+      "INTERNAL_API_KEY not configured - required for scan callbacks",
+    );
+    res
+      .status(500)
+      .json({ error: "Server misconfiguration: internal API key not set" });
+    return;
+  }
+
+  if (!apiKey) {
+    res.status(401).json({ error: "Internal API key required" });
+    return;
+  }
+
+  // Must check length first - timingSafeEqual throws on length mismatch
+  if (apiKey.length !== expectedKey.length) {
+    res.status(403).json({ error: "Invalid internal API key" });
+    return;
+  }
+
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const clientKey = Buffer.from(apiKey);
+    const serverKey = Buffer.from(expectedKey);
+
+    if (!crypto.timingSafeEqual(clientKey, serverKey)) {
+      res.status(403).json({ error: "Invalid internal API key" });
+      return;
+    }
+  } catch {
+    res.status(403).json({ error: "Invalid internal API key" });
+    return;
+  }
+
+  next();
+}

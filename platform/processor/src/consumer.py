@@ -113,11 +113,13 @@ class EventConsumer:
                 data = event.get("data", {})
 
                 # Add event metadata to data for processing
+                # ADR-007: Include subject (scan_id) for orchestration tracking
                 data["_event_metadata"] = {
                     "id": event.get("id"),
                     "type": event.get("type"),
                     "source": event.get("source"),
                     "time": event.get("time"),
+                    "subject": event.get("subject"),  # scan_id for orchestration
                 }
 
                 # Process through handler

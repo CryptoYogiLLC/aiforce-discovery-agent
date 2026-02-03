@@ -10,6 +10,7 @@ interface CloudEvent {
   source: string;
   id: string;
   time: string;
+  subject?: string; // scan_id for orchestration tracking (ADR-007)
   data: Record<string, unknown>;
 }
 
@@ -101,11 +102,17 @@ class Consumer {
     // Extract source service from event source
     const sourceService = event.source.split("/").pop() || "unknown";
 
-    // Store discovery
+    // Store discovery with optional scan_id from CloudEvent subject (ADR-007)
     await db.query(
-      `INSERT INTO gateway.discoveries (id, event_type, source_service, payload, status, created_at)
-       VALUES ($1, $2, $3, $4, 'pending', NOW())`,
-      [event.id, event.type, sourceService, JSON.stringify(event.data)],
+      `INSERT INTO gateway.discoveries (id, event_type, source_service, payload, scan_id, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())`,
+      [
+        event.id,
+        event.type,
+        sourceService,
+        JSON.stringify(event.data),
+        event.subject || null,
+      ],
     );
 
     // Create audit entry

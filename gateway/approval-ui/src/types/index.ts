@@ -152,3 +152,105 @@ export interface UpdateUserInput {
   role?: UserRole;
   is_active?: boolean;
 }
+
+// Scan Types (ADR-007)
+export type ScanRunStatus =
+  | "pending"
+  | "scanning"
+  | "awaiting_inspection"
+  | "inspecting"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type CollectorStatus =
+  | "pending"
+  | "starting"
+  | "running"
+  | "completed"
+  | "failed"
+  | "timeout";
+
+export interface ScanPhase {
+  status: "pending" | "running" | "completed" | "failed";
+  progress: number;
+  discovery_count: number;
+}
+
+export interface ScanRun {
+  id: string;
+  profile_id: string | null;
+  config_snapshot: Record<string, unknown>;
+  status: ScanRunStatus;
+  error_message: string | null;
+  phases: {
+    enumeration: ScanPhase;
+    identification: ScanPhase;
+    inspection: ScanPhase;
+    correlation: ScanPhase;
+  };
+  total_discoveries: number;
+  started_at: string | null;
+  completed_at: string | null;
+  started_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScanCollector {
+  id: string;
+  scan_id: string;
+  collector_name: string;
+  status: CollectorStatus;
+  progress: number;
+  discovery_count: number;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  last_heartbeat_at: string | null;
+}
+
+export interface ScanDiscovery {
+  id: string;
+  event_type: string;
+  source_service: string;
+  payload: Record<string, unknown>;
+  scan_id: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+}
+
+export interface DatabaseCandidateMetadata {
+  database_candidate?: boolean;
+  candidate_type?: string;
+  candidate_confidence?: number;
+  candidate_reason?: string;
+  validation_method?: string;
+  banner_mismatch?: boolean;
+  identified_by?: string;
+}
+
+export interface DatabaseCandidate extends ScanDiscovery {
+  payload: {
+    host?: string;
+    port?: number;
+    ip_address?: string;
+    metadata?: DatabaseCandidateMetadata;
+    [key: string]: unknown;
+  };
+}
+
+export interface InspectionTarget {
+  host: string;
+  port: number;
+  db_type: string;
+  database?: string;
+  credentials: {
+    username: string;
+    password: string;
+  };
+}
+
+export interface InspectionRequest {
+  targets: InspectionTarget[];
+}

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aiforce-discovery-agent/collectors/network-scanner/internal/callback"
 	"github.com/aiforce-discovery-agent/collectors/network-scanner/internal/config"
 	"github.com/aiforce-discovery-agent/collectors/network-scanner/internal/publisher"
 	"go.uber.org/zap"
@@ -16,16 +17,19 @@ import (
 
 // Scanner performs network discovery operations.
 type Scanner struct {
-	config       config.ScannerConfig
-	publisher    *publisher.Publisher
-	logger       *zap.SugaredLogger
-	limiter      *rate.Limiter
+	config        config.ScannerConfig
+	publisher     *publisher.Publisher
+	logger        *zap.SugaredLogger
+	limiter       *rate.Limiter
 	fingerprinter *Fingerprinter
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	running      bool
-	mu           sync.RWMutex
+	ctx           context.Context
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
+	running       bool
+	mu            sync.RWMutex
+
+	// ADR-007: Autonomous scan support
+	reporter *callback.Reporter
 }
 
 // ScanResult represents the result of scanning a single target.
@@ -87,6 +91,166 @@ func (s *Scanner) Start() error {
 	}
 
 	return nil
+}
+
+// AutonomousScanConfig holds configuration for an autonomous scan (ADR-007).
+type AutonomousScanConfig struct {
+	ScanID       string
+	Subnets      []string
+	PortRanges   []string
+	RateLimitPPS int
+	TimeoutMS    int
+	ProgressURL  string
+	CompleteURL  string
+	APIKey       string
+}
+
+// StartAutonomous begins an autonomous scan with custom config and callbacks (ADR-007).
+func (s *Scanner) StartAutonomous(cfg AutonomousScanConfig) error {
+	s.mu.Lock()
+	if s.running {
+		s.mu.Unlock()
+		return fmt.Errorf("scanner already running")
+	}
+	s.running = true
+
+	// Reset context for new scan
+	s.ctx, s.cancel = context.WithCancel(context.Background())
+
+	// Apply custom config
+	if len(cfg.Subnets) > 0 {
+		s.config.Subnets = cfg.Subnets
+	}
+	if len(cfg.PortRanges) > 0 {
+		s.config.PortRanges = cfg.PortRanges
+	}
+	if cfg.RateLimitPPS > 0 {
+		s.config.RateLimit = cfg.RateLimitPPS
+		s.limiter = rate.NewLimiter(rate.Limit(cfg.RateLimitPPS), cfg.RateLimitPPS)
+	}
+	if cfg.TimeoutMS > 0 {
+		s.config.Timeout = cfg.TimeoutMS
+	}
+
+	// Set up callback reporter
+	s.reporter = callback.NewReporter(cfg.ScanID, cfg.ProgressURL, cfg.CompleteURL, cfg.APIKey, s.logger)
+
+	// Set scan ID on publisher for CloudEvent subject
+	s.publisher.SetScanID(cfg.ScanID)
+
+	s.mu.Unlock()
+
+	s.logger.Infow("Starting autonomous network scan",
+		"scan_id", cfg.ScanID,
+		"subnets", cfg.Subnets,
+		"port_ranges", cfg.PortRanges,
+	)
+
+	// Report initial progress
+	if err := s.reporter.ReportProgress("initializing", 0, "Starting network scan"); err != nil {
+		s.logger.Warnw("Failed to report initial progress", "error", err)
+	}
+
+	// Start scanning in goroutine
+	go s.runAutonomousScan()
+
+	return nil
+}
+
+func (s *Scanner) runAutonomousScan() {
+	totalSubnets := len(s.config.Subnets)
+	completedSubnets := 0
+
+	for i, subnet := range s.config.Subnets {
+		select {
+		case <-s.ctx.Done():
+			s.finishAutonomousScan("cancelled", "Scan was cancelled")
+			return
+		default:
+		}
+
+		// Report subnet progress
+		progress := (i * 100) / totalSubnets
+		if s.reporter != nil {
+			msg := fmt.Sprintf("Scanning subnet %d/%d: %s", i+1, totalSubnets, subnet)
+			_ = s.reporter.ReportProgress("port_scanning", progress, msg)
+		}
+
+		s.wg.Add(1)
+		s.scanSubnetAutonomous(subnet)
+		completedSubnets++
+	}
+
+	s.wg.Wait()
+	s.finishAutonomousScan("completed", "")
+}
+
+func (s *Scanner) scanSubnetAutonomous(subnet string) {
+	defer s.wg.Done()
+
+	s.logger.Infow("Scanning subnet", "subnet", subnet)
+
+	_, ipNet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		s.logger.Errorw("Invalid subnet", "subnet", subnet, "error", err)
+		return
+	}
+
+	// Iterate through all IPs in subnet
+	for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incrementIP(ip) {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+		}
+
+		ipStr := ip.String()
+
+		// Skip excluded subnets
+		if s.isExcluded(ipStr) {
+			continue
+		}
+
+		results, err := s.ScanTarget(ipStr)
+		if err != nil {
+			if err == context.Canceled {
+				return
+			}
+			s.logger.Warnw("Scan error", "ip", ipStr, "error", err)
+			continue
+		}
+
+		// Publish results and track discovery count
+		for _, result := range results {
+			if err := s.publisher.PublishServiceDiscovered(result); err != nil {
+				s.logger.Errorw("Failed to publish result", "error", err)
+			} else if s.reporter != nil {
+				s.reporter.IncrementDiscoveryCount()
+			}
+		}
+	}
+}
+
+func (s *Scanner) finishAutonomousScan(status string, errorMsg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.running = false
+
+	// Clear scan ID from publisher
+	s.publisher.SetScanID("")
+
+	// Send completion callback
+	if s.reporter != nil {
+		if err := s.reporter.ReportComplete(status, errorMsg); err != nil {
+			s.logger.Errorw("Failed to report completion", "error", err)
+		}
+		s.logger.Infow("Autonomous scan finished",
+			"status", status,
+			"discovery_count", s.reporter.GetDiscoveryCount(),
+		)
+		s.reporter = nil
+	}
 }
 
 // Stop gracefully stops the scanner.

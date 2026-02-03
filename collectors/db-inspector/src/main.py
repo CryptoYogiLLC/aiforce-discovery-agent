@@ -4,8 +4,8 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Header
+from pydantic import BaseModel, SecretStr
 
 from .config import get_settings
 from .connectors.postgres import PostgresConnector
@@ -94,6 +94,43 @@ class ReadyResponse(BaseModel):
     status: str
     service: str
     rabbitmq: str
+
+
+# ADR-007: Batch inspection models with SecretStr for credential security
+class BatchTargetCredentials(BaseModel):
+    """Credentials for a batch inspection target."""
+
+    username: str
+    password: SecretStr  # SecretStr prevents credential logging
+
+
+class BatchInspectionTarget(BaseModel):
+    """A single target for batch inspection."""
+
+    host: str
+    port: int
+    db_type: str  # postgres, mysql, etc.
+    database: str | None = None
+    credentials: BatchTargetCredentials
+
+
+class BatchInspectionRequest(BaseModel):
+    """Request model for batch database inspection (ADR-007)."""
+
+    scan_id: str
+    targets: list[BatchInspectionTarget]
+    progress_url: str
+    complete_url: str
+
+
+class BatchInspectionResponse(BaseModel):
+    """Response model for batch inspection."""
+
+    status: str
+    message: str
+    scan_id: str
+    inspected_count: int
+    failed_count: int
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -226,6 +263,166 @@ async def inspect_mysql_default() -> InspectionResponse:
         database=settings.mysql_database,
     )
     return await inspect_database(request)
+
+
+@app.post("/api/v1/inspect/batch", response_model=BatchInspectionResponse)
+async def batch_inspect_databases(
+    request: BatchInspectionRequest,
+    x_internal_api_key: str | None = Header(None, alias="X-Internal-API-Key"),
+) -> BatchInspectionResponse:
+    """
+    Batch database inspection endpoint (ADR-007).
+
+    Inspects multiple database targets for deep inspection phase.
+    Reports progress via callbacks to approval-api.
+    Credentials are handled securely with SecretStr.
+    """
+    from .connectors.callback import CallbackReporter
+
+    logger.info(
+        f"Starting batch inspection for scan {request.scan_id} "
+        f"with {len(request.targets)} targets"
+    )
+
+    # Initialize callback reporter
+    reporter = CallbackReporter(
+        scan_id=request.scan_id,
+        progress_url=request.progress_url,
+        complete_url=request.complete_url,
+        api_key=x_internal_api_key,
+    )
+
+    # Report initial progress
+    await reporter.report_progress("initializing", 0, "Starting database inspection")
+
+    # Set scan_id on publisher for CloudEvent subject
+    if publisher:
+        publisher.set_scan_id(request.scan_id)
+
+    inspected_count = 0
+    failed_count = 0
+    total_targets = len(request.targets)
+
+    try:
+        for i, target in enumerate(request.targets):
+            progress = ((i + 1) * 100) // total_targets
+
+            # Report progress for each target
+            await reporter.report_progress(
+                "inspecting",
+                progress,
+                f"Inspecting {target.db_type} at {target.host}:{target.port}",
+            )
+
+            try:
+                # Select connector based on db_type
+                if target.db_type.lower() == "postgres":
+                    connector = PostgresConnector(
+                        host=target.host,
+                        port=target.port,
+                        user=target.credentials.username,
+                        password=target.credentials.password.get_secret_value(),
+                        database=target.database or "postgres",
+                    )
+                elif target.db_type.lower() == "mysql":
+                    connector = MySQLConnector(
+                        host=target.host,
+                        port=target.port,
+                        user=target.credentials.username,
+                        password=target.credentials.password.get_secret_value(),
+                        database=target.database or "mysql",
+                    )
+                else:
+                    logger.warning(f"Unsupported database type: {target.db_type}")
+                    failed_count += 1
+                    continue
+
+                # Connect and inspect
+                await connector.connect()
+                try:
+                    tables = await connector.get_tables()
+                    relationships = await connector.get_relationships()
+                    # PII detection runs but findings aren't published in batch mode
+                    await connector.detect_pii(
+                        sample_size=settings.pii_sample_size,
+                        enabled=settings.pii_detection_enabled,
+                    )
+
+                    # Publish events
+                    if publisher and publisher.is_connected:
+                        await publisher.publish_database_discovered(
+                            host=target.host,
+                            port=target.port,
+                            db_type=target.db_type,
+                            database=target.database or "unknown",
+                        )
+                        reporter.increment_discovery_count()
+
+                        for table in tables:
+                            await publisher.publish_schema_discovered(
+                                database=target.database or "unknown",
+                                table=table,
+                            )
+                            reporter.increment_discovery_count()
+
+                        for relationship in relationships:
+                            await publisher.publish_relationship_discovered(
+                                database=target.database or "unknown",
+                                relationship=relationship,
+                            )
+                            reporter.increment_discovery_count()
+
+                    inspected_count += 1
+                    logger.info(
+                        f"Inspected {target.db_type} at {target.host}:{target.port}: "
+                        f"{len(tables)} tables, {len(relationships)} relationships"
+                    )
+
+                finally:
+                    await connector.close()
+
+            except Exception as e:
+                # Log error but continue with other targets (don't log password)
+                logger.error(
+                    f"Failed to inspect {target.db_type} at {target.host}:{target.port}: {e}"
+                )
+                failed_count += 1
+
+        # Clear scan_id from publisher
+        if publisher:
+            publisher.set_scan_id(None)
+
+        # Report completion
+        if failed_count == total_targets:
+            await reporter.report_complete(
+                "failed", f"All {total_targets} targets failed inspection"
+            )
+        else:
+            await reporter.report_complete("completed", None)
+
+        await reporter.close()
+
+        logger.info(
+            f"Batch inspection completed: {inspected_count} succeeded, "
+            f"{failed_count} failed, {reporter.discovery_count} discoveries"
+        )
+
+        return BatchInspectionResponse(
+            status="completed" if failed_count < total_targets else "partial",
+            message=f"Inspected {inspected_count}/{total_targets} targets, "
+            f"{reporter.discovery_count} discoveries",
+            scan_id=request.scan_id,
+            inspected_count=inspected_count,
+            failed_count=failed_count,
+        )
+
+    except Exception as e:
+        logger.error(f"Batch inspection failed: {e}")
+        if publisher:
+            publisher.set_scan_id(None)
+        await reporter.report_complete("failed", str(e))
+        await reporter.close()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

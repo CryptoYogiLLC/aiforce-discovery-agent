@@ -85,6 +85,10 @@ class EventPublisher:
             "correlationid": event_metadata.get("id"),
         }
 
+        # ADR-007: Preserve subject (scan_id) for orchestration tracking
+        if event_metadata.get("subject"):
+            event["subject"] = event_metadata["subject"]
+
         # Routing key for scored events
         routing_key = f"scored.{entity_type}"
 

@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis:6379"
 
     # Processing configuration
+    candidate_identification_enabled: bool = (
+        True  # ADR-007: Database candidate identification
+    )
     enrichment_enabled: bool = True
     pii_redaction_enabled: bool = True
     scoring_enabled: bool = True
