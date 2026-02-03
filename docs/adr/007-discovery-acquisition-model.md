@@ -77,7 +77,7 @@ Deep inspection (schema extraction, API introspection) requires credentials prov
 │                                                                 │
 │  1. Admin selects targets for deep inspection                  │
 │  2. Admin provides credentials in UI (per-target)              │
-│  3. Credentials transmitted to collector (TLS, in-memory)      │
+│  3. Credentials transmitted to collector (internal network)    │
 │  4. Collector performs inspection                              │
 │  5. Credentials DISCARDED immediately after use                │
 │  6. Results stored WITHOUT credentials                         │
