@@ -137,9 +137,23 @@ func (s *Scanner) StartAutonomous(cfg AutonomousScanConfig) error {
 		s.config.Timeout = cfg.TimeoutMS
 	}
 	if cfg.MaxConcurrentHosts > 0 {
+		// Cap to prevent resource exhaustion (DoS via excessive goroutines/file descriptors)
+		maxAllowed := 500
+		if cfg.MaxConcurrentHosts > maxAllowed {
+			s.logger.Warnw("MaxConcurrentHosts exceeds limit, capping",
+				"requested", cfg.MaxConcurrentHosts, "max", maxAllowed)
+			cfg.MaxConcurrentHosts = maxAllowed
+		}
 		s.config.Concurrency = cfg.MaxConcurrentHosts
 	}
 	if cfg.DeadHostThreshold > 0 {
+		// Cap to reasonable limit
+		maxThreshold := 50
+		if cfg.DeadHostThreshold > maxThreshold {
+			s.logger.Warnw("DeadHostThreshold exceeds limit, capping",
+				"requested", cfg.DeadHostThreshold, "max", maxThreshold)
+			cfg.DeadHostThreshold = maxThreshold
+		}
 		s.config.DeadHostThreshold = cfg.DeadHostThreshold
 	}
 
@@ -231,6 +245,11 @@ func (s *Scanner) runAutonomousScan() {
 
 	close(progressDone)
 	s.wg.Wait()
+
+	// Check if discoveries were published successfully
+	if s.reporter != nil && s.reporter.GetDiscoveryCount() == 0 {
+		s.logger.Warnw("Scan completed with zero published discoveries")
+	}
 	s.finishAutonomousScan("completed", "")
 }
 
@@ -252,6 +271,8 @@ func (s *Scanner) scanSubnetAutonomous(subnet string, scannedIPs *int64) {
 
 	ipChan := make(chan string, numWorkers*2)
 	var workerWg sync.WaitGroup
+	var publishFailures int64
+	var openPortsFound int64
 
 	// Start worker pool
 	for i := 0; i < numWorkers; i++ {
@@ -270,7 +291,9 @@ func (s *Scanner) scanSubnetAutonomous(subnet string, scannedIPs *int64) {
 
 				// Publish results and track discovery count
 				for _, result := range results {
+					atomic.AddInt64(&openPortsFound, 1)
 					if err := s.publisher.PublishServiceDiscovered(result); err != nil {
+						atomic.AddInt64(&publishFailures, 1)
 						s.logger.Errorw("Failed to publish result", "error", err)
 					} else if s.reporter != nil {
 						s.reporter.IncrementDiscoveryCount()
@@ -306,6 +329,14 @@ feedLoop:
 
 	close(ipChan)
 	workerWg.Wait()
+
+	// Log if all publishes failed (indicates a systemic issue)
+	found := atomic.LoadInt64(&openPortsFound)
+	failed := atomic.LoadInt64(&publishFailures)
+	if found > 0 && failed == found {
+		s.logger.Errorw("All publish attempts failed for subnet",
+			"subnet", subnet, "open_ports", found, "failures", failed)
+	}
 }
 
 func (s *Scanner) finishAutonomousScan(status string, errorMsg string) {

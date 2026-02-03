@@ -55,6 +55,7 @@ export default function ScanPage() {
         setSelectedProfileId(data[0].id);
       }
     } catch (err) {
+      setError("Failed to load configuration profiles");
       console.error("Failed to load profiles:", err);
     }
   };
@@ -86,6 +87,7 @@ export default function ScanPage() {
         }
       }
     } catch (err) {
+      setError("Failed to check for active scans");
       console.warn("Failed to check for active scan:", err);
     }
   };

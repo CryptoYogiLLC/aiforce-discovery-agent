@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import aio_pika
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pathlib import Path
@@ -331,10 +331,10 @@ async def scan_local_repos(request: DryRunScanRequest) -> DryRunScanResponse:
 
     analysis_ids = []
     discoveries_posted = 0
+    failed_repos: list[str] = []
 
     for repo_path in repo_dirs:
         analysis_id = str(uuid.uuid4())
-        analysis_ids.append(analysis_id)
         repo_url = f"dryrun://{request.session_id}/{repo_path.name}"
 
         logger.info(f"Analyzing local repo: {repo_path.name} (id: {analysis_id})")
@@ -390,6 +390,9 @@ async def scan_local_repos(request: DryRunScanRequest) -> DryRunScanResponse:
                 )
                 discoveries_posted += 1
 
+            # Only track as successful after all analysis and posting succeeds
+            analysis_ids.append(analysis_id)
+
             logger.info(
                 f"Analyzed {repo_path.name}: {len(languages)} languages, "
                 f"{len(frameworks)} frameworks, {len(dependencies)} dependencies"
@@ -397,23 +400,37 @@ async def scan_local_repos(request: DryRunScanRequest) -> DryRunScanResponse:
 
         except Exception as e:
             logger.error(f"Failed to analyze {repo_path.name}: {e}")
+            failed_repos.append(repo_path.name)
             # Continue with other repos
 
+    # Determine status based on results
+    if failed_repos and not analysis_ids:
+        status = "failed"
+    elif failed_repos:
+        status = "partial"
+    else:
+        status = "completed"
+
+    failure_detail = f" ({len(failed_repos)} failed)" if failed_repos else ""
+
     logger.info(
-        f"Dry-run scan completed: {len(analysis_ids)}/{len(repo_dirs)} repos analyzed, "
-        f"{discoveries_posted} discoveries posted"
+        f"Dry-run scan {status}: {len(analysis_ids)}/{len(repo_dirs)} repos analyzed, "
+        f"{discoveries_posted} discoveries posted{failure_detail}"
     )
 
     return DryRunScanResponse(
-        status="completed",
-        message=f"Scanned {len(analysis_ids)} repositories, posted {discoveries_posted} discoveries",
+        status=status,
+        message=f"Scanned {len(analysis_ids)}/{len(repo_dirs)} repositories, "
+        f"posted {discoveries_posted} discoveries{failure_detail}",
         repos_scanned=len(analysis_ids),
         analysis_ids=analysis_ids,
     )
 
 
 @app.post("/api/v1/discover", response_model=DiscoverResponse)
-async def discover_repositories(request: DiscoverRequest) -> DiscoverResponse:
+async def discover_repositories(
+    request: DiscoverRequest, raw_request: Request
+) -> DiscoverResponse:
     """
     Autonomous repository discovery endpoint (ADR-007).
 
@@ -429,9 +446,8 @@ async def discover_repositories(request: DiscoverRequest) -> DiscoverResponse:
     from .analyzers.metrics_calculator import MetricsCalculator
     from .publisher import EventPublisher
 
-    # Get API key from header for callbacks
-    api_key = None
-    # Note: FastAPI request object available via dependency injection if needed
+    # Forward API key from incoming request to callback reporter
+    api_key = raw_request.headers.get("x-internal-api-key")
 
     # Initialize callback reporter
     reporter = CallbackReporter(
@@ -492,6 +508,9 @@ async def discover_repositories(request: DiscoverRequest) -> DiscoverResponse:
         publisher = EventPublisher(channel, settings.rabbitmq_exchange, request.scan_id)
 
         total_repos = len(repo_dirs)
+        failed_repos: list[str] = []
+        analyzed_repos = 0
+
         for i, repo_path in enumerate(repo_dirs):
             progress = ((i + 1) * 100) // total_repos
 
@@ -541,6 +560,7 @@ async def discover_repositories(request: DiscoverRequest) -> DiscoverResponse:
                     )
                     reporter.increment_discovery_count()
 
+                analyzed_repos += 1
                 logger.info(
                     f"Analyzed {repo_path.name}: {len(languages)} languages, "
                     f"{len(frameworks)} frameworks, {len(dependencies)} dependencies"
@@ -548,20 +568,33 @@ async def discover_repositories(request: DiscoverRequest) -> DiscoverResponse:
 
             except Exception as e:
                 logger.error(f"Failed to analyze {repo_path.name}: {e}")
+                failed_repos.append(repo_path.name)
                 # Continue with other repos
 
+        # Determine completion status
+        if failed_repos and analyzed_repos == 0:
+            status = "failed"
+            error_msg = f"All {len(failed_repos)} repos failed analysis"
+        elif failed_repos:
+            status = "completed"
+            error_msg = f"{len(failed_repos)}/{total_repos} repos failed analysis"
+        else:
+            status = "completed"
+            error_msg = None
+
         # Report completion
-        await reporter.report_complete("completed", None)
+        await reporter.report_complete(status, error_msg)
         await reporter.close()
 
         logger.info(
-            f"Autonomous discovery completed: {total_repos} repos, "
+            f"Autonomous discovery {status}: {analyzed_repos}/{total_repos} repos, "
             f"{reporter.discovery_count} discoveries"
         )
 
         return DiscoverResponse(
-            status="completed",
-            message=f"Discovered {reporter.discovery_count} items from {total_repos} repositories",
+            status=status,
+            message=f"Discovered {reporter.discovery_count} items from "
+            f"{analyzed_repos}/{total_repos} repositories",
             scan_id=request.scan_id,
         )
 

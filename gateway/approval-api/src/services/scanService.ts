@@ -451,10 +451,14 @@ async function triggerCollector(
       ),
       rate_limit_pps: config.scan_rate_limit || 100,
       timeout_ms: ((config.timeout_seconds as number) || 30) * 1000,
-      max_concurrent_hosts:
-        (advancedSettings.max_concurrent_hosts as number) || 50,
-      dead_host_threshold:
-        (advancedSettings.dead_host_threshold as number) || 5,
+      max_concurrent_hosts: Math.min(
+        Math.max((advancedSettings.max_concurrent_hosts as number) || 50, 1),
+        500,
+      ),
+      dead_host_threshold: Math.min(
+        Math.max((advancedSettings.dead_host_threshold as number) || 5, 1),
+        50,
+      ),
       progress_url: `${APPROVAL_API_URL}/api/scans/internal/${scanId}/progress`,
       complete_url: `${APPROVAL_API_URL}/api/scans/internal/${scanId}/complete`,
     };
@@ -855,6 +859,61 @@ export async function triggerInspection(
   }
 
   return (await getScanById(scanId))!;
+}
+
+// === Stuck Scan Detection ===
+
+/**
+ * Check for stuck scans (no heartbeat from any collector for too long)
+ * Should be called periodically (e.g. every 60s) from a timer
+ */
+export async function detectStuckScans(): Promise<void> {
+  const stuckThresholdMinutes = 10;
+
+  try {
+    // Find scans in active state where ALL collectors have stale heartbeats
+    const result = await pool.query(
+      `SELECT sr.id, sr.status
+       FROM gateway.scan_runs sr
+       WHERE sr.status IN ('scanning', 'inspecting')
+         AND sr.started_at < NOW() - INTERVAL '${stuckThresholdMinutes} minutes'
+         AND NOT EXISTS (
+           SELECT 1 FROM gateway.scan_collectors sc
+           WHERE sc.scan_id = sr.id
+             AND sc.status IN ('starting', 'running')
+             AND sc.last_heartbeat_at > NOW() - INTERVAL '${stuckThresholdMinutes} minutes'
+         )`,
+    );
+
+    for (const row of result.rows) {
+      const scanId = (row as Record<string, unknown>).id as string;
+      logger.warn("Stuck scan detected, marking as failed", { scanId });
+
+      // Mark all non-terminal collectors as timed out
+      await pool.query(
+        `UPDATE gateway.scan_collectors
+         SET status = 'timeout', completed_at = NOW(),
+             error_message = 'No heartbeat received - collector appears stuck'
+         WHERE scan_id = $1 AND status NOT IN ('completed', 'failed', 'timeout')`,
+        [scanId],
+      );
+
+      // Mark scan as failed
+      await pool.query(
+        `UPDATE gateway.scan_runs
+         SET status = 'failed', completed_at = NOW(),
+             error_message = 'Scan timed out: no collector heartbeat for ${stuckThresholdMinutes} minutes'
+         WHERE id = $1`,
+        [scanId],
+      );
+
+      scanEvents.emitComplete(scanId, "failed");
+    }
+  } catch (err) {
+    logger.error("Failed to check for stuck scans", {
+      error: (err as Error).message,
+    });
+  }
 }
 
 // === Utility Functions ===

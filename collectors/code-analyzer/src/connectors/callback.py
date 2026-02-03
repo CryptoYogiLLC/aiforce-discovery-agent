@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timezone
 
 import httpx
+from httpx import HTTPError, TimeoutException
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,13 @@ class CallbackReporter:
         progress_url: str,
         complete_url: str,
         api_key: str | None = None,
+        collector_name: str = "code-analyzer",
     ):
         self.scan_id = scan_id
         self.progress_url = progress_url
         self.complete_url = complete_url
         self.api_key = api_key
+        self.collector_name = collector_name
         self._sequence = 0
         self._discovery_count = 0
         self._client = httpx.AsyncClient(timeout=30.0)
@@ -61,7 +64,7 @@ class CallbackReporter:
 
         payload = {
             "scan_id": self.scan_id,
-            "collector": "code-analyzer",
+            "collector": self.collector_name,
             "sequence": self._sequence,
             "phase": phase,
             "progress": progress,
@@ -82,8 +85,14 @@ class CallbackReporter:
                 )
                 return False
             return True
-        except Exception as e:
-            logger.warning(f"Progress callback error: {e}")
+        except TimeoutException:
+            logger.warning("Progress callback timed out")
+            return False
+        except HTTPError as e:
+            logger.warning(f"Progress callback HTTP error: {e}")
+            return False
+        except OSError as e:
+            logger.warning(f"Progress callback network error: {e}")
             return False
 
     async def report_complete(
@@ -103,7 +112,7 @@ class CallbackReporter:
         """
         payload = {
             "scan_id": self.scan_id,
-            "collector": "code-analyzer",
+            "collector": self.collector_name,
             "status": status,
             "discovery_count": self._discovery_count,
             "error_message": error_message,
@@ -122,8 +131,14 @@ class CallbackReporter:
                 )
                 return False
             return True
-        except Exception as e:
-            logger.warning(f"Complete callback error: {e}")
+        except TimeoutException:
+            logger.warning("Complete callback timed out")
+            return False
+        except HTTPError as e:
+            logger.warning(f"Complete callback HTTP error: {e}")
+            return False
+        except OSError as e:
+            logger.warning(f"Complete callback network error: {e}")
             return False
 
     def increment_discovery_count(self, count: int = 1) -> None:

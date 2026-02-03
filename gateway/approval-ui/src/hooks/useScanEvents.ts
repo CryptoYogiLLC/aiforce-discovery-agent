@@ -53,9 +53,26 @@ export function useScanEvents({
 }: UseScanEventsOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const maxReconnectAttempts = 5;
+  const maxReconnectAttempts = 10;
+
+  // Store callbacks in refs to avoid stale closures and dependency churn
+  const callbacksRef = useRef({
+    onProgress,
+    onCollectorUpdate,
+    onStatusUpdate,
+    onScanUpdate,
+    onError,
+  });
+  callbacksRef.current = {
+    onProgress,
+    onCollectorUpdate,
+    onStatusUpdate,
+    onScanUpdate,
+    onError,
+  };
 
   const connect = useCallback(() => {
     if (!scanId) return;
@@ -72,14 +89,14 @@ export function useScanEvents({
 
       eventSource.onopen = () => {
         setIsConnected(true);
+        reconnectAttemptsRef.current = 0;
         setReconnectAttempts(0);
       };
 
       // Handle named events
       eventSource.addEventListener("connected", (event) => {
         try {
-          const data = JSON.parse(event.data);
-          console.log("SSE connected:", data);
+          JSON.parse(event.data);
         } catch {
           // Ignore parse errors
         }
@@ -88,7 +105,7 @@ export function useScanEvents({
       eventSource.addEventListener("progress", (event) => {
         try {
           const data: ScanProgressEvent = JSON.parse(event.data);
-          onProgress?.(data);
+          callbacksRef.current.onProgress?.(data);
         } catch (err) {
           console.error("Failed to parse progress event:", err);
         }
@@ -97,7 +114,7 @@ export function useScanEvents({
       eventSource.addEventListener("collector", (event) => {
         try {
           const data: ScanCollectorEvent = JSON.parse(event.data);
-          onCollectorUpdate?.(data);
+          callbacksRef.current.onCollectorUpdate?.(data);
         } catch (err) {
           console.error("Failed to parse collector event:", err);
         }
@@ -106,10 +123,10 @@ export function useScanEvents({
       eventSource.addEventListener("status", (event) => {
         try {
           const data: ScanStatusEvent = JSON.parse(event.data);
-          onStatusUpdate?.(data);
+          callbacksRef.current.onStatusUpdate?.(data);
 
           // Also emit as scan update
-          onScanUpdate?.({
+          callbacksRef.current.onScanUpdate?.({
             status: data.status as ScanRun["status"],
             error_message: data.error_message || null,
           });
@@ -121,47 +138,43 @@ export function useScanEvents({
       eventSource.addEventListener("scan", (event) => {
         try {
           const data: Partial<ScanRun> = JSON.parse(event.data);
-          onScanUpdate?.(data);
+          callbacksRef.current.onScanUpdate?.(data);
         } catch (err) {
           console.error("Failed to parse scan event:", err);
         }
       });
-
-      // Generic message handler (fallback)
-      eventSource.onmessage = (event) => {
-        // Handle generic messages if any
-        console.log("SSE message:", event.data);
-      };
 
       eventSource.onerror = () => {
         setIsConnected(false);
         eventSourceRef.current?.close();
         eventSourceRef.current = null;
 
-        // Attempt reconnection with exponential backoff
-        if (reconnectAttempts < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+        const attempts = reconnectAttemptsRef.current;
+        if (attempts < maxReconnectAttempts) {
+          // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (capped)
+          const delay = Math.min(1000 * Math.pow(2, attempts), 30000);
           reconnectTimeoutRef.current = window.setTimeout(() => {
-            setReconnectAttempts((prev) => prev + 1);
+            reconnectAttemptsRef.current += 1;
+            setReconnectAttempts(reconnectAttemptsRef.current);
             connect();
           }, delay);
         } else {
-          onError?.("SSE connection failed after max retries");
+          // Reset and try one more cycle after a longer delay (60s)
+          reconnectTimeoutRef.current = window.setTimeout(() => {
+            reconnectAttemptsRef.current = 0;
+            setReconnectAttempts(0);
+            connect();
+          }, 60000);
+          callbacksRef.current.onError?.(
+            "SSE connection unstable, retrying in 60s",
+          );
         }
       };
     } catch (err) {
       console.error("Failed to create EventSource:", err);
-      onError?.("Failed to establish SSE connection");
+      callbacksRef.current.onError?.("Failed to establish SSE connection");
     }
-  }, [
-    scanId,
-    reconnectAttempts,
-    onProgress,
-    onCollectorUpdate,
-    onStatusUpdate,
-    onScanUpdate,
-    onError,
-  ]);
+  }, [scanId]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

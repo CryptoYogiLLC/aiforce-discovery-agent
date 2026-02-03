@@ -36,7 +36,7 @@ import {
   authenticate,
   validateCsrf,
   requireRole,
-  internalApiKeyAuth,
+  internalApiKeyAuthRequired,
 } from "../middleware/auth";
 
 const router = Router();
@@ -128,13 +128,13 @@ router.post(
 /**
  * Internal endpoints (for orchestrator/collector callbacks)
  * These use internal API key authentication for service-to-service communication
- * If INTERNAL_API_KEY is not set, requests are allowed (dev mode)
+ * INTERNAL_API_KEY must be configured - no dev bypass
  */
 
 // POST /api/dryrun/internal/discoveries - Add discovery
 router.post(
   "/internal/discoveries",
-  internalApiKeyAuth,
+  internalApiKeyAuthRequired,
   addDiscoveryValidation,
   addDiscoveryHandler,
 );
@@ -142,7 +142,7 @@ router.post(
 // POST /api/dryrun/internal/containers - Register container
 router.post(
   "/internal/containers",
-  internalApiKeyAuth,
+  internalApiKeyAuthRequired,
   registerContainerValidation,
   registerContainerHandler,
 );
@@ -150,7 +150,7 @@ router.post(
 // POST /api/dryrun/internal/sessions/:id/complete - Mark completed
 router.post(
   "/internal/sessions/:id/complete",
-  internalApiKeyAuth,
+  internalApiKeyAuthRequired,
   completeSessionValidation,
   completeSessionHandler,
 );
