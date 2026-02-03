@@ -27,6 +27,28 @@ import { logger } from "./logger";
 const ORCHESTRATOR_URL =
   process.env.DRYRUN_ORCHESTRATOR_URL || "http://dryrun-orchestrator:8030";
 
+// API key for authenticating with the orchestrator (required for Docker control)
+const ORCHESTRATOR_API_KEY = process.env.DRYRUN_ORCHESTRATOR_API_KEY || "";
+
+/**
+ * Get headers for orchestrator requests including authentication
+ */
+function getOrchestratorHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (ORCHESTRATOR_API_KEY) {
+    headers["X-API-Key"] = ORCHESTRATOR_API_KEY;
+  } else {
+    logger.warn(
+      "DRYRUN_ORCHESTRATOR_API_KEY not set - orchestrator calls may fail",
+    );
+  }
+
+  return headers;
+}
+
 /**
  * Create a new dry-run session
  */
@@ -68,7 +90,7 @@ export async function startSession(sessionId: string): Promise<DryrunSession> {
 
     const response = await fetch(`${ORCHESTRATOR_URL}/api/dryrun/start`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getOrchestratorHeaders(),
       body: JSON.stringify({ session_id: sessionId }),
       signal: controller.signal,
     });
@@ -258,7 +280,7 @@ export async function stopSession(sessionId: string): Promise<DryrunSession> {
 
     const response = await fetch(`${ORCHESTRATOR_URL}/api/dryrun/cleanup`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getOrchestratorHeaders(),
       body: JSON.stringify({ session_id: sessionId }),
       signal: controller.signal,
     });

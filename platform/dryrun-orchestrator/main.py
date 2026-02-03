@@ -5,16 +5,20 @@ Manages Docker containers for dry-run testing sessions.
 Communicates with approval-api for session management.
 
 Reference: ADR-004 Dry-Run Orchestration Model
+
+Security: All Docker control endpoints require API key authentication.
+This service should only be accessible from the internal Docker network.
 """
 
+import secrets
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import docker
 import structlog
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, Header, HTTPException
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 # Configure structured logging
@@ -40,20 +44,55 @@ logger = structlog.get_logger()
 
 
 class Settings(BaseSettings):
-    """Application settings from environment variables."""
+    """
+    Application settings from environment variables.
 
-    postgres_url: str = "postgresql://discovery:discovery@postgres:5432/discovery_agent"
-    rabbitmq_url: str = "amqp://discovery:discovery@rabbitmq:5672/"
-    redis_url: str = "redis://redis:6379"
+    Security: No default credentials are provided. All sensitive settings
+    MUST be configured via environment variables.
+    """
+
+    # Database/messaging URLs - REQUIRED, no defaults for security
+    postgres_url: str = Field(
+        ...,  # Required field, no default
+        description="PostgreSQL connection URL (required)",
+    )
+    rabbitmq_url: str = Field(
+        ...,  # Required field, no default
+        description="RabbitMQ connection URL (required)",
+    )
+    redis_url: str = Field(
+        default="redis://redis:6379",  # Redis typically doesn't have auth in dev
+        description="Redis connection URL",
+    )
+
+    # API key for authenticating requests from approval-api
+    api_key: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="API key for internal service authentication. "
+        "Auto-generated if not provided (should be set in production).",
+    )
+
+    # Non-sensitive settings with safe defaults
     log_level: str = "info"
     sample_repos_path: str = "/repos"
     docker_network: str = "discovery-network"
 
     class Config:
-        env_prefix = ""
+        env_prefix = "DRYRUN_"
 
 
-settings = Settings()
+# Validate settings on startup
+try:
+    settings = Settings()
+except Exception as e:
+    # Provide helpful error message for missing required settings
+    raise SystemExit(
+        f"Configuration error: {e}\n"
+        "Required environment variables:\n"
+        "  DRYRUN_POSTGRES_URL - PostgreSQL connection URL\n"
+        "  DRYRUN_RABBITMQ_URL - RabbitMQ connection URL\n"
+        "  DRYRUN_API_KEY - API key for authentication (optional, auto-generated if not set)"
+    ) from e
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -64,6 +103,35 @@ app = FastAPI(
 
 # Docker client
 docker_client: Optional[docker.DockerClient] = None
+
+
+async def verify_api_key(x_api_key: Annotated[str | None, Header()] = None) -> str:
+    """
+    Verify the API key for protected endpoints.
+
+    All Docker control endpoints require a valid API key to prevent
+    unauthorized container manipulation.
+    """
+    if not x_api_key:
+        logger.warning("API request without authentication")
+        raise HTTPException(
+            status_code=401,
+            detail="Missing X-API-Key header",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+
+    if not secrets.compare_digest(x_api_key, settings.api_key):
+        logger.warning("API request with invalid key")
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid API key",
+        )
+
+    return x_api_key
+
+
+# Type alias for dependency injection
+ApiKeyDep = Annotated[str, Depends(verify_api_key)]
 
 
 class StartSessionRequest(BaseModel):
@@ -114,6 +182,16 @@ async def startup():
     try:
         docker_client = docker.from_env()
         logger.info("Docker client initialized")
+
+        # Log API key status (masked for security)
+        api_key_preview = (
+            settings.api_key[:8] + "..." if settings.api_key else "NOT SET"
+        )
+        logger.info(
+            "Authentication configured",
+            api_key_preview=api_key_preview,
+            note="Protected endpoints require X-API-Key header",
+        )
     except docker.errors.DockerException as e:
         logger.error("Failed to initialize Docker client", error=str(e))
         raise
@@ -186,11 +264,13 @@ async def list_sample_repos():
 
 
 @app.post("/api/dryrun/start", response_model=StartSessionResponse)
-async def start_dryrun_session(request: StartSessionRequest):
+async def start_dryrun_session(request: StartSessionRequest, _api_key: ApiKeyDep):
     """
     Start a dry-run session by spinning up test containers.
 
     This creates the simulated environment for the collectors to scan.
+
+    Requires: X-API-Key header for authentication.
     """
     session_id = request.session_id
     logger.info("Starting dry-run session", session_id=session_id)
@@ -293,9 +373,11 @@ async def start_dryrun_session(request: StartSessionRequest):
 
 
 @app.post("/api/dryrun/cleanup", response_model=CleanupResponse)
-async def cleanup_dryrun_session(request: CleanupRequest):
+async def cleanup_dryrun_session(request: CleanupRequest, _api_key: ApiKeyDep):
     """
     Cleanup a dry-run session by stopping and removing containers.
+
+    Requires: X-API-Key header for authentication.
     """
     session_id = request.session_id
     logger.info("Cleaning up dry-run session", session_id=session_id)
@@ -359,8 +441,12 @@ async def cleanup_dryrun_session(request: CleanupRequest):
 
 
 @app.get("/api/dryrun/{session_id}/containers")
-async def get_session_containers(session_id: str):
-    """Get status of all containers for a session."""
+async def get_session_containers(session_id: str, _api_key: ApiKeyDep):
+    """
+    Get status of all containers for a session.
+
+    Requires: X-API-Key header for authentication.
+    """
     if not docker_client:
         raise HTTPException(status_code=503, detail="Docker client not available")
 
