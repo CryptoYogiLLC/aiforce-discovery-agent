@@ -102,14 +102,16 @@ func (s *Server) startScanHandler(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err == nil && req.ScanID != "" {
 		// Autonomous mode - start with custom config
 		cfg := scanner.AutonomousScanConfig{
-			ScanID:       req.ScanID,
-			Subnets:      req.Subnets,
-			PortRanges:   req.PortRanges,
-			RateLimitPPS: req.RateLimitPPS,
-			TimeoutMS:    req.TimeoutMS,
-			ProgressURL:  req.ProgressURL,
-			CompleteURL:  req.CompleteURL,
-			APIKey:       c.GetHeader("X-Internal-API-Key"),
+			ScanID:             req.ScanID,
+			Subnets:            req.Subnets,
+			PortRanges:         req.PortRanges,
+			RateLimitPPS:       req.RateLimitPPS,
+			TimeoutMS:          req.TimeoutMS,
+			MaxConcurrentHosts: req.MaxConcurrentHosts,
+			DeadHostThreshold:  req.DeadHostThreshold,
+			ProgressURL:        req.ProgressURL,
+			CompleteURL:        req.CompleteURL,
+			APIKey:             c.GetHeader("X-Internal-API-Key"),
 		}
 
 		if err := s.scanner.StartAutonomous(cfg); err != nil {

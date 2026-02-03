@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,6 +40,7 @@ type ScanResult struct {
 	Port      int
 	Protocol  string
 	Open      bool
+	TimedOut  bool
 	Service   string
 	Banner    string
 	Timestamp time.Time
@@ -96,14 +98,16 @@ func (s *Scanner) Start() error {
 
 // AutonomousScanConfig holds configuration for an autonomous scan (ADR-007).
 type AutonomousScanConfig struct {
-	ScanID       string
-	Subnets      []string
-	PortRanges   []string
-	RateLimitPPS int
-	TimeoutMS    int
-	ProgressURL  string
-	CompleteURL  string
-	APIKey       string
+	ScanID             string
+	Subnets            []string
+	PortRanges         []string
+	RateLimitPPS       int
+	TimeoutMS          int
+	MaxConcurrentHosts int
+	DeadHostThreshold  int
+	ProgressURL        string
+	CompleteURL        string
+	APIKey             string
 }
 
 // StartAutonomous begins an autonomous scan with custom config and callbacks (ADR-007).
@@ -131,6 +135,12 @@ func (s *Scanner) StartAutonomous(cfg AutonomousScanConfig) error {
 	}
 	if cfg.TimeoutMS > 0 {
 		s.config.Timeout = cfg.TimeoutMS
+	}
+	if cfg.MaxConcurrentHosts > 0 {
+		s.config.Concurrency = cfg.MaxConcurrentHosts
+	}
+	if cfg.DeadHostThreshold > 0 {
+		s.config.DeadHostThreshold = cfg.DeadHostThreshold
 	}
 
 	// Set up callback reporter
@@ -235,40 +245,67 @@ func (s *Scanner) scanSubnetAutonomous(subnet string, scannedIPs *int64) {
 		return
 	}
 
-	// Iterate through all IPs in subnet
+	numWorkers := s.config.Concurrency
+	if numWorkers <= 0 {
+		numWorkers = 100
+	}
+
+	ipChan := make(chan string, numWorkers*2)
+	var workerWg sync.WaitGroup
+
+	// Start worker pool
+	for i := 0; i < numWorkers; i++ {
+		workerWg.Add(1)
+		go func() {
+			defer workerWg.Done()
+			for ipStr := range ipChan {
+				results, err := s.ScanTarget(ipStr)
+				if err != nil {
+					if err == context.Canceled {
+						return
+					}
+					s.logger.Warnw("Scan error", "ip", ipStr, "error", err)
+					continue
+				}
+
+				// Publish results and track discovery count
+				for _, result := range results {
+					if err := s.publisher.PublishServiceDiscovered(result); err != nil {
+						s.logger.Errorw("Failed to publish result", "error", err)
+					} else if s.reporter != nil {
+						s.reporter.IncrementDiscoveryCount()
+					}
+				}
+			}
+		}()
+	}
+
+	// Feed IPs into the worker channel
+feedLoop:
 	for ip := ipNet.IP.Mask(ipNet.Mask); ipNet.Contains(ip); incrementIP(ip) {
 		select {
 		case <-s.ctx.Done():
-			return
+			break feedLoop
 		default:
 		}
 
+		// Copy IP string before sending — incrementIP mutates the underlying bytes
 		ipStr := ip.String()
 		atomic.AddInt64(scannedIPs, 1)
 
-		// Skip excluded subnets
 		if s.isExcluded(ipStr) {
 			continue
 		}
 
-		results, err := s.ScanTarget(ipStr)
-		if err != nil {
-			if err == context.Canceled {
-				return
-			}
-			s.logger.Warnw("Scan error", "ip", ipStr, "error", err)
-			continue
-		}
-
-		// Publish results and track discovery count
-		for _, result := range results {
-			if err := s.publisher.PublishServiceDiscovered(result); err != nil {
-				s.logger.Errorw("Failed to publish result", "error", err)
-			} else if s.reporter != nil {
-				s.reporter.IncrementDiscoveryCount()
-			}
+		select {
+		case ipChan <- ipStr:
+		case <-s.ctx.Done():
+			break feedLoop
 		}
 	}
+
+	close(ipChan)
+	workerWg.Wait()
 }
 
 func (s *Scanner) finishAutonomousScan(status string, errorMsg string) {
@@ -317,9 +354,18 @@ func (s *Scanner) IsRunning() bool {
 }
 
 // ScanTarget scans a single IP address for open ports.
+// Uses dead host detection: after consecutive timeouts exceed the threshold,
+// the host is assumed unreachable and remaining ports are skipped.
 func (s *Scanner) ScanTarget(ip string) ([]ScanResult, error) {
 	var results []ScanResult
 	ports := s.expandPortRanges()
+
+	deadHostThreshold := s.config.DeadHostThreshold
+	if deadHostThreshold <= 0 {
+		deadHostThreshold = 5
+	}
+
+	consecutiveTimeouts := 0
 
 	for _, port := range ports {
 		select {
@@ -335,7 +381,21 @@ func (s *Scanner) ScanTarget(ip string) ([]ScanResult, error) {
 
 		result := s.scanPort(ip, port, "tcp")
 		if result.Open {
+			consecutiveTimeouts = 0
 			results = append(results, result)
+		} else if result.TimedOut {
+			consecutiveTimeouts++
+			if consecutiveTimeouts >= deadHostThreshold {
+				s.logger.Debugw("Host appears dead, skipping remaining ports",
+					"ip", ip,
+					"consecutive_timeouts", consecutiveTimeouts,
+					"ports_scanned", port,
+				)
+				break
+			}
+		} else {
+			// Connection refused (RST) — host is alive, port is closed
+			consecutiveTimeouts = 0
 		}
 	}
 
@@ -400,6 +460,9 @@ func (s *Scanner) scanPort(ip string, port int, protocol string) ScanResult {
 
 	conn, err := net.DialTimeout(protocol, address, timeout)
 	if err != nil {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			result.TimedOut = true
+		}
 		return result
 	}
 	defer func() { _ = conn.Close() }()
@@ -423,6 +486,21 @@ func (s *Scanner) scanPort(ip string, port int, protocol string) ScanResult {
 	return result
 }
 
+// databasePriorityPorts are scanned first to quickly identify database services
+// and to trigger dead host detection on high-value ports.
+var databasePriorityPorts = map[int]bool{
+	1433:  true, // MSSQL
+	1521:  true, // Oracle
+	3306:  true, // MySQL
+	5432:  true, // PostgreSQL
+	5672:  true, // RabbitMQ
+	5984:  true, // CouchDB
+	6379:  true, // Redis
+	9042:  true, // Cassandra
+	9200:  true, // Elasticsearch
+	27017: true, // MongoDB
+}
+
 func (s *Scanner) expandPortRanges() []int {
 	portSet := make(map[int]bool)
 
@@ -443,12 +521,21 @@ func (s *Scanner) expandPortRanges() []int {
 		}
 	}
 
-	ports := make([]int, 0, len(portSet))
+	// Partition into priority (database) ports first, then the rest
+	priority := make([]int, 0)
+	rest := make([]int, 0, len(portSet))
 	for port := range portSet {
-		ports = append(ports, port)
+		if databasePriorityPorts[port] {
+			priority = append(priority, port)
+		} else {
+			rest = append(rest, port)
+		}
 	}
 
-	return ports
+	sort.Ints(priority)
+	sort.Ints(rest)
+
+	return append(priority, rest...)
 }
 
 func (s *Scanner) isExcluded(ip string) bool {

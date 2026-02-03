@@ -4,13 +4,15 @@ package api
 // StartScanRequest represents the request body for starting an autonomous scan.
 // Reference: ADR-007 Discovery Acquisition Model
 type StartScanRequest struct {
-	ScanID       string   `json:"scan_id" binding:"required,uuid"`
-	Subnets      []string `json:"subnets" binding:"required,min=1"`
-	PortRanges   []string `json:"port_ranges"`
-	RateLimitPPS int      `json:"rate_limit_pps"`
-	TimeoutMS    int      `json:"timeout_ms"`
-	ProgressURL  string   `json:"progress_url" binding:"required,url"`
-	CompleteURL  string   `json:"complete_url" binding:"required,url"`
+	ScanID             string   `json:"scan_id" binding:"required,uuid"`
+	Subnets            []string `json:"subnets" binding:"required,min=1"`
+	PortRanges         []string `json:"port_ranges"`
+	RateLimitPPS       int      `json:"rate_limit_pps"`
+	TimeoutMS          int      `json:"timeout_ms"`
+	MaxConcurrentHosts int      `json:"max_concurrent_hosts"`
+	DeadHostThreshold  int      `json:"dead_host_threshold"`
+	ProgressURL        string   `json:"progress_url" binding:"required,url"`
+	CompleteURL        string   `json:"complete_url" binding:"required,url"`
 }
 
 // StopScanRequest represents the request body for stopping a scan.

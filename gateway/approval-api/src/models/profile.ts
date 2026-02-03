@@ -15,6 +15,8 @@ export interface AdvancedSettings {
   skip_fingerprinting?: boolean;
   deep_inspection?: boolean;
   offline_mode?: boolean;
+  max_concurrent_hosts?: number;
+  dead_host_threshold?: number;
   [key: string]: unknown;
 }
 

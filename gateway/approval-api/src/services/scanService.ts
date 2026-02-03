@@ -441,6 +441,8 @@ async function triggerCollector(
 
   if (collectorName === "network-scanner") {
     endpoint = `${baseUrl}/api/v1/scan/start`;
+    const advancedSettings =
+      (config.advanced_settings as Record<string, unknown>) || {};
     body = {
       scan_id: scanId,
       subnets: config.target_subnets || ["192.168.1.0/24"],
@@ -449,6 +451,10 @@ async function triggerCollector(
       ),
       rate_limit_pps: config.scan_rate_limit || 100,
       timeout_ms: ((config.timeout_seconds as number) || 30) * 1000,
+      max_concurrent_hosts:
+        (advancedSettings.max_concurrent_hosts as number) || 50,
+      dead_host_threshold:
+        (advancedSettings.dead_host_threshold as number) || 5,
       progress_url: `${APPROVAL_API_URL}/api/scans/internal/${scanId}/progress`,
       complete_url: `${APPROVAL_API_URL}/api/scans/internal/${scanId}/complete`,
     };
