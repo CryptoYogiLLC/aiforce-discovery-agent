@@ -235,6 +235,50 @@ export async function logAuthEvent(
 }
 
 /**
+ * Internal API key authentication for service-to-service communication
+ * Used by collectors and orchestrator to post discoveries
+ */
+export function internalApiKeyAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  const apiKey = req.headers["x-internal-api-key"] as string;
+  const expectedKey = process.env.INTERNAL_API_KEY || "";
+
+  if (!expectedKey) {
+    // If no internal API key is configured, allow requests (dev mode)
+    logger.warn("INTERNAL_API_KEY not configured - allowing internal request");
+    next();
+    return;
+  }
+
+  if (!apiKey) {
+    res.status(401).json({ error: "Internal API key required" });
+    return;
+  }
+
+  // Use timing-safe comparison
+  try {
+    const clientKey = Buffer.from(apiKey);
+    const serverKey = Buffer.from(expectedKey);
+
+    if (
+      clientKey.length !== serverKey.length ||
+      !crypto.timingSafeEqual(clientKey, serverKey)
+    ) {
+      res.status(403).json({ error: "Invalid internal API key" });
+      return;
+    }
+  } catch {
+    res.status(403).json({ error: "Invalid internal API key" });
+    return;
+  }
+
+  next();
+}
+
+/**
  * Optional authentication - populates user if session exists but doesn't require it
  */
 export function optionalAuth(

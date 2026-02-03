@@ -19,6 +19,7 @@ const API_BASE = "/api";
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
@@ -126,27 +127,54 @@ export const api = {
       return fetchJSON(`${API_BASE}/dryrun/sessions?${searchParams}`);
     },
 
-    getSession: (id: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}`);
+    getSession: async (id: string): Promise<DryrunSession> => {
+      const response = await fetchJSON<{ session: DryrunSession }>(
+        `${API_BASE}/dryrun/sessions/${id}`,
+      );
+      return response.session;
     },
 
-    createSession: (profileId: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions`, {
+    createSession: async (
+      profileId: string,
+      csrfToken?: string,
+    ): Promise<DryrunSession> => {
+      const response = await fetchJSON<{
+        session: DryrunSession;
+        message: string;
+      }>(`${API_BASE}/dryrun/sessions`, {
         method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
         body: JSON.stringify({ profile_id: profileId }),
       });
+      return response.session;
     },
 
-    startSession: (id: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}/start`, {
+    startSession: async (
+      id: string,
+      csrfToken?: string,
+    ): Promise<DryrunSession> => {
+      const response = await fetchJSON<{
+        session: DryrunSession;
+        message: string;
+      }>(`${API_BASE}/dryrun/sessions/${id}/start`, {
         method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
       });
+      return response.session;
     },
 
-    stopSession: (id: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}/stop`, {
+    stopSession: async (
+      id: string,
+      csrfToken?: string,
+    ): Promise<DryrunSession> => {
+      const response = await fetchJSON<{
+        session: DryrunSession;
+        message: string;
+      }>(`${API_BASE}/dryrun/sessions/${id}/stop`, {
         method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
       });
+      return response.session;
     },
 
     // Discoveries
@@ -169,20 +197,29 @@ export const api = {
       );
     },
 
-    reviewDiscovery: (
+    reviewDiscovery: async (
       discoveryId: string,
       status: "approved" | "rejected",
       notes?: string,
+      csrfToken?: string,
     ): Promise<DryrunDiscovery> => {
-      return fetchJSON(`${API_BASE}/dryrun/discoveries/${discoveryId}/review`, {
-        method: "POST",
-        body: JSON.stringify({ status, notes }),
-      });
+      const response = await fetchJSON<{ discovery: DryrunDiscovery }>(
+        `${API_BASE}/dryrun/discoveries/${discoveryId}/review`,
+        {
+          method: "POST",
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+          body: JSON.stringify({ status, notes }),
+        },
+      );
+      return response.discovery;
     },
 
     // Containers
-    getContainers: (sessionId: string): Promise<DryrunContainer[]> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${sessionId}/containers`);
+    getContainers: async (sessionId: string): Promise<DryrunContainer[]> => {
+      const response = await fetchJSON<{ containers: DryrunContainer[] }>(
+        `${API_BASE}/dryrun/sessions/${sessionId}/containers`,
+      );
+      return response.containers;
     },
 
     // Export

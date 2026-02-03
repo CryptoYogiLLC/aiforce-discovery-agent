@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import type { DryrunSession, DryrunDiscovery, DryrunContainer } from "../types";
 
 const statusBadgeStyles: Record<string, { bg: string; color: string }> = {
@@ -21,6 +22,7 @@ const discoveryStatusStyles: Record<string, { bg: string; color: string }> = {
 
 export default function DryRunSessionDetail() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const { csrfToken } = useAuth();
   const [session, setSession] = useState<DryrunSession | null>(null);
   const [discoveries, setDiscoveries] = useState<DryrunDiscovery[]>([]);
   const [containers, setContainers] = useState<DryrunContainer[]>([]);
@@ -62,7 +64,12 @@ export default function DryRunSessionDetail() {
     status: "approved" | "rejected",
   ) => {
     try {
-      await api.dryrun.reviewDiscovery(discoveryId, status);
+      await api.dryrun.reviewDiscovery(
+        discoveryId,
+        status,
+        undefined,
+        csrfToken || undefined,
+      );
       // Reload discoveries
       const discoveriesData = await api.dryrun.getDiscoveries(sessionId!, {
         limit: 100,

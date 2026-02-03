@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 import type { DryrunSessionSummary } from "../../types";
 
 interface DryRunHistoryProps {
@@ -21,9 +22,30 @@ export default function DryRunHistory({
   onViewSession,
   refreshTrigger,
 }: DryRunHistoryProps) {
+  const { csrfToken } = useAuth();
   const [sessions, setSessions] = useState<DryrunSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stoppingId, setStoppingId] = useState<string | null>(null);
+
+  const isActiveStatus = (status: string) =>
+    ["pending", "generating", "running"].includes(status);
+
+  const handleStop = async (sessionId: string) => {
+    if (!confirm("Are you sure you want to stop this session?")) return;
+
+    try {
+      setStoppingId(sessionId);
+      setError(null);
+      await api.dryrun.stopSession(sessionId, csrfToken || undefined);
+      // Reload sessions after stopping
+      await loadSessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to stop session");
+    } finally {
+      setStoppingId(null);
+    }
+  };
 
   const loadSessions = useCallback(async () => {
     try {
@@ -137,12 +159,24 @@ export default function DryRunHistory({
                   )}
                 </td>
                 <td>
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => onViewSession?.(session.id)}
-                  >
-                    {session.status === "failed" ? "Details" : "View"}
-                  </button>
+                  <div style={{ display: "flex", gap: "0.25rem" }}>
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => onViewSession?.(session.id)}
+                    >
+                      {session.status === "failed" ? "Details" : "View"}
+                    </button>
+                    {isActiveStatus(session.status) && (
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => handleStop(session.id)}
+                        disabled={stoppingId === session.id}
+                        style={{ padding: "0.25rem 0.5rem" }}
+                      >
+                        {stoppingId === session.id ? "..." : "Stop"}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

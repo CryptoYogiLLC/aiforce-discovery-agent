@@ -145,7 +145,7 @@ export async function me(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  res.json({ user: req.user });
+  res.json({ user: req.user, csrf_token: req.csrfToken });
 }
 
 /**

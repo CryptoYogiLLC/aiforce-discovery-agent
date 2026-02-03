@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO", alias="CODEANALYZER_LOG_LEVEL")
 
+    # Dry-run settings
+    dryrun_mode: bool = Field(default=False, alias="DRYRUN_MODE")
+    sample_repos_path: str = Field(default="/repos", alias="SAMPLE_REPOS_PATH")
+
     @property
     def excluded_dirs_list(self) -> list[str]:
         """Get excluded directories as a list."""
