@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
-import type { ScanRun, InspectionTarget, ConfigProfile } from "../types";
+import type { ScanRun, InspectionTarget, ConfigProfileFull } from "../types";
 import {
   CandidateReviewPanel,
   CredentialEntryForm,
@@ -18,7 +18,7 @@ type ScanView = "start" | "running" | "candidates" | "inspecting" | "history";
 export default function ScanPage() {
   const { csrfToken, user } = useAuth();
   const [scan, setScan] = useState<ScanRun | null>(null);
-  const [profiles, setProfiles] = useState<ConfigProfile[]>([]);
+  const [profiles, setProfiles] = useState<ConfigProfileFull[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);

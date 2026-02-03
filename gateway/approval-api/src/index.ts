@@ -14,6 +14,7 @@ import dryrunRoutes from "./routes/dryrun";
 import scansRoutes from "./routes/scans";
 import dashboardRoutes from "./routes/dashboard";
 import auditTrailRoutes from "./routes/auditTrail";
+import logsRoutes from "./routes/logs";
 import { runMigrations } from "./db/migrate";
 import {
   startCleanupScheduler,
@@ -57,6 +58,7 @@ app.use("/api/dryrun", dryrunRoutes);
 app.use("/api/scans", scansRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/audit-trail", auditTrailRoutes);
+app.use("/api/logs", logsRoutes);
 app.use("/api/discoveries", discoveryRoutes);
 app.use("/api/audit", auditRoutes);
 

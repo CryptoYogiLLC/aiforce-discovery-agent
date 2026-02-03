@@ -6,7 +6,9 @@ import type {
   DryrunSessionSummary,
   DryrunDiscovery,
   DryrunContainer,
-  ConfigProfile,
+  ConfigProfileFull,
+  CreateProfileInput,
+  UpdateProfileInput,
   User,
   UserListResult,
   UserRole,
@@ -16,6 +18,14 @@ import type {
   ScanCollector,
   ScanDiscovery,
   InspectionRequest,
+  DashboardOverview,
+  ServiceInfo,
+  RabbitMQMetrics,
+  EventMetrics,
+  TransmissionBatch,
+  TransmissionItem,
+  AuditLog,
+  AuditLogQueryParams,
 } from "../types";
 
 const API_BASE = "/api";
@@ -233,15 +243,77 @@ export const api = {
   },
 
   profiles: {
-    list: async (): Promise<ConfigProfile[]> => {
-      const data = await fetchJSON<{ profiles: ConfigProfile[] }>(
-        `${API_BASE}/profiles`,
+    list: async (params?: {
+      profile_type?: string;
+    }): Promise<ConfigProfileFull[]> => {
+      const searchParams = new URLSearchParams();
+      if (params?.profile_type)
+        searchParams.set("profile_type", params.profile_type);
+      const data = await fetchJSON<{ profiles: ConfigProfileFull[] }>(
+        `${API_BASE}/profiles?${searchParams}`,
       );
       return data.profiles;
     },
 
-    get: (id: string): Promise<ConfigProfile> => {
+    get: (id: string): Promise<ConfigProfileFull> => {
       return fetchJSON(`${API_BASE}/profiles/${id}`);
+    },
+
+    create: (
+      data: CreateProfileInput,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify(data),
+      });
+    },
+
+    update: (
+      id: string,
+      data: UpdateProfileInput,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}`, {
+        method: "PATCH",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify(data),
+      });
+    },
+
+    clone: (
+      id: string,
+      name: string,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}/clone`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify({ name }),
+      });
+    },
+
+    delete: (id: string, csrfToken: string): Promise<{ message: string }> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}`, {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": csrfToken },
+      });
+    },
+
+    exportYaml: (id: string): Promise<{ yaml: string }> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}/export`);
+    },
+
+    importYaml: (
+      yaml: string,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles/import`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify({ yaml }),
+      });
     },
   },
 
@@ -414,6 +486,119 @@ export const api = {
     // SSE events endpoint URL (not a fetch, used for EventSource)
     getEventsUrl: (scanId: string): string => {
       return `${API_BASE}/scans/${scanId}/events`;
+    },
+  },
+
+  // Dashboard API
+  dashboard: {
+    getOverview: (): Promise<DashboardOverview> => {
+      return fetchJSON(`${API_BASE}/dashboard`);
+    },
+
+    getServices: (): Promise<Record<string, ServiceInfo>> => {
+      return fetchJSON(`${API_BASE}/dashboard/services`);
+    },
+
+    getRabbitMQ: (): Promise<RabbitMQMetrics> => {
+      return fetchJSON(`${API_BASE}/dashboard/rabbitmq`);
+    },
+
+    getEvents: (): Promise<EventMetrics> => {
+      return fetchJSON(`${API_BASE}/dashboard/events`);
+    },
+  },
+
+  // Audit Trail API
+  auditTrail: {
+    listTransmissions: (params?: {
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }): Promise<{ batches: TransmissionBatch[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.status) searchParams.set("status", params.status);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(`${API_BASE}/audit-trail/transmissions?${searchParams}`);
+    },
+
+    getBatch: (id: string): Promise<TransmissionBatch> => {
+      return fetchJSON(`${API_BASE}/audit-trail/transmissions/${id}`);
+    },
+
+    getBatchItems: (
+      id: string,
+      params?: { limit?: number; offset?: number },
+    ): Promise<{ items: TransmissionItem[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(
+        `${API_BASE}/audit-trail/transmissions/${id}/items?${searchParams}`,
+      );
+    },
+
+    getItemPayload: (
+      id: string,
+      reason?: string,
+    ): Promise<{ payload: Record<string, unknown> }> => {
+      const searchParams = new URLSearchParams();
+      if (reason) searchParams.set("reason", reason);
+      return fetchJSON(
+        `${API_BASE}/audit-trail/items/${id}/payload?${searchParams}`,
+      );
+    },
+
+    verifyItem: (
+      id: string,
+    ): Promise<{ verified: boolean; hash_match: boolean }> => {
+      return fetchJSON(`${API_BASE}/audit-trail/items/${id}/verify`);
+    },
+
+    queryLogs: (
+      params?: AuditLogQueryParams,
+    ): Promise<{ logs: AuditLog[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.start_date) searchParams.set("start_date", params.start_date);
+      if (params?.end_date) searchParams.set("end_date", params.end_date);
+      if (params?.action) searchParams.set("action", params.action);
+      if (params?.actor) searchParams.set("actor", params.actor);
+      if (params?.resource_type)
+        searchParams.set("resource_type", params.resource_type);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(`${API_BASE}/audit-trail/logs?${searchParams}`);
+    },
+
+    export: async (params: {
+      start_date: string;
+      end_date: string;
+      format?: "json" | "csv";
+    }): Promise<Blob> => {
+      const searchParams = new URLSearchParams();
+      searchParams.set("start_date", params.start_date);
+      searchParams.set("end_date", params.end_date);
+      if (params.format) searchParams.set("format", params.format);
+
+      const response = await fetch(
+        `${API_BASE}/audit-trail/export?${searchParams}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed: HTTP ${response.status}`);
+      }
+
+      return response.blob();
+    },
+  },
+
+  // Log Streaming API
+  logs: {
+    getStreamUrl: (): string => {
+      return `${API_BASE}/logs/stream`;
     },
   },
 };

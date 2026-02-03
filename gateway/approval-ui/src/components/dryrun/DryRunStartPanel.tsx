@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
-import type { ConfigProfile } from "../../types";
+import type { ConfigProfileFull } from "../../types";
 
 interface DryRunStartPanelProps {
   onStart: (profileId: string, seed?: number) => void;
@@ -13,7 +13,7 @@ export default function DryRunStartPanel({
   isLoading,
   disabled,
 }: DryRunStartPanelProps) {
-  const [profiles, setProfiles] = useState<ConfigProfile[]>([]);
+  const [profiles, setProfiles] = useState<ConfigProfileFull[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [seedOption, setSeedOption] = useState<"auto" | "custom">("auto");
   const [customSeed, setCustomSeed] = useState<string>("");

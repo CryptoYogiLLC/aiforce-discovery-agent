@@ -254,3 +254,155 @@ export interface InspectionTarget {
 export interface InspectionRequest {
   targets: InspectionTarget[];
 }
+
+// Dashboard Types
+export interface ServiceHealth {
+  name: string;
+  status: "healthy" | "degraded" | "unhealthy" | "unknown";
+  version: string | null;
+  uptime_seconds: number | null;
+  last_check: string;
+  error_message: string | null;
+}
+
+export interface ServiceMetrics {
+  cpu_percent: number;
+  memory_mb: number;
+  requests_per_minute: number;
+  error_rate: number;
+}
+
+export interface ServiceInfo {
+  health: ServiceHealth;
+  metrics: ServiceMetrics | null;
+}
+
+export interface QueueInfo {
+  name: string;
+  messages: number;
+  consumers: number;
+  message_rate: number;
+  state: "running" | "idle" | "blocked";
+}
+
+export interface RabbitMQMetrics {
+  connected: boolean;
+  queues: QueueInfo[];
+  total_messages: number;
+  total_consumers: number;
+}
+
+export interface EventMetrics {
+  events_per_second: number;
+  error_rate: number;
+  events_today: number;
+  events_last_hour: number;
+}
+
+export interface DashboardOverview {
+  services: Record<string, ServiceInfo>;
+  rabbitmq: RabbitMQMetrics;
+  events: EventMetrics;
+  last_updated: string;
+}
+
+// Profile Editor Types (extended)
+export interface ProfileConfig {
+  target_subnets: string[];
+  port_ranges: {
+    tcp: string;
+    udp: string;
+  };
+  scan_rate_limit: number;
+  max_services: number;
+  max_hosts: number;
+  timeout_seconds: number;
+  disk_space_limit_mb: number;
+  memory_limit_mb: number;
+  enabled_collectors: string[];
+}
+
+export interface ConfigProfileFull {
+  id: string;
+  name: string;
+  description: string | null;
+  config: ProfileConfig;
+  is_default: boolean;
+  profile_type: "preset" | "custom";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateProfileInput {
+  name: string;
+  description?: string;
+  config: ProfileConfig;
+}
+
+export interface UpdateProfileInput {
+  name?: string;
+  description?: string;
+  config?: Partial<ProfileConfig>;
+}
+
+// Audit Trail Types
+export interface TransmissionBatch {
+  id: string;
+  batch_number: number;
+  status: "pending" | "transmitting" | "completed" | "failed";
+  item_count: number;
+  transmitted_at: string | null;
+  response_code: number | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface TransmissionItem {
+  id: string;
+  batch_id: string;
+  discovery_id: string;
+  event_type: string;
+  source_service: string;
+  payload_hash: string;
+  transmitted_at: string;
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  actor: string;
+  resource_type: string;
+  resource_id: string;
+  details: Record<string, unknown>;
+  ip_address: string | null;
+  user_agent: string | null;
+}
+
+export interface AuditLogQueryParams {
+  start_date?: string;
+  end_date?: string;
+  action?: string;
+  actor?: string;
+  resource_type?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// Log Streaming Types
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  service: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LogStreamFilter {
+  services?: string[];
+  levels?: LogLevel[];
+}

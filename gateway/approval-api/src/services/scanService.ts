@@ -118,23 +118,25 @@ export async function startScan(scanId: string): Promise<ScanRun> {
     await createCollectorRecord(scanId, collectorName);
 
     // Trigger collector asynchronously (don't wait)
-    triggerCollector(scanId, collectorName, scan.config_snapshot).catch(
-      (err) => {
-        logger.error("Failed to trigger collector", {
-          scanId,
-          collector: collectorName,
-          error: (err as Error).message,
-        });
-        // Update collector status to failed
-        updateCollectorStatus(
-          scanId,
-          collectorName,
-          "failed",
-          0,
-          (err as Error).message,
-        );
-      },
-    );
+    triggerCollector(
+      scanId,
+      collectorName,
+      scan.config_snapshot as unknown as Record<string, unknown>,
+    ).catch((err) => {
+      logger.error("Failed to trigger collector", {
+        scanId,
+        collector: collectorName,
+        error: (err as Error).message,
+      });
+      // Update collector status to failed
+      updateCollectorStatus(
+        scanId,
+        collectorName,
+        "failed",
+        0,
+        (err as Error).message,
+      );
+    });
   }
 
   logger.info("Scan started", { scanId, collectors: enabledCollectors });
