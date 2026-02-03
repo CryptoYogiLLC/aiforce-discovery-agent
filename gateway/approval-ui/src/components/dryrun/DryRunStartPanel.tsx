@@ -45,10 +45,18 @@ export default function DryRunStartPanel({
 
   const handleStart = () => {
     if (!selectedProfile) return;
-    const seed =
-      seedOption === "custom" && customSeed
-        ? parseInt(customSeed, 10)
-        : undefined;
+
+    let seed: number | undefined;
+    if (seedOption === "custom" && customSeed) {
+      const parsed = parseInt(customSeed, 10);
+      if (isNaN(parsed)) {
+        setError("Please enter a valid numeric seed");
+        return;
+      }
+      seed = parsed;
+    }
+
+    setError(null);
     onStart(selectedProfile, seed);
   };
 

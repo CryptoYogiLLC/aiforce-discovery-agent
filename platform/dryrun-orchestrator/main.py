@@ -10,16 +10,20 @@ Security: All Docker control endpoints require API key authentication.
 This service should only be accessible from the internal Docker network.
 """
 
+import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Optional
 
 import docker
 import structlog
 from fastapi import Depends, FastAPI, Header, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
+
+# Valid session ID pattern (alphanumeric, hyphens, underscores)
+SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 # Configure structured logging
 structlog.configure(
@@ -137,7 +141,22 @@ ApiKeyDep = Annotated[str, Depends(verify_api_key)]
 class StartSessionRequest(BaseModel):
     """Request to start a dry-run session."""
 
-    session_id: str
+    session_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=64,
+        description="Session ID (alphanumeric, hyphens, underscores only)",
+    )
+
+    @field_validator("session_id")
+    @classmethod
+    def validate_session_id(cls, v: str) -> str:
+        """Validate session_id contains only safe characters for Docker names."""
+        if not SESSION_ID_PATTERN.match(v):
+            raise ValueError(
+                "session_id must contain only alphanumeric characters, hyphens, and underscores"
+            )
+        return v
 
 
 class StartSessionResponse(BaseModel):
@@ -151,7 +170,22 @@ class StartSessionResponse(BaseModel):
 class CleanupRequest(BaseModel):
     """Request to cleanup a dry-run session."""
 
-    session_id: str
+    session_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=64,
+        description="Session ID (alphanumeric, hyphens, underscores only)",
+    )
+
+    @field_validator("session_id")
+    @classmethod
+    def validate_session_id(cls, v: str) -> str:
+        """Validate session_id contains only safe characters for Docker names."""
+        if not SESSION_ID_PATTERN.match(v):
+            raise ValueError(
+                "session_id must contain only alphanumeric characters, hyphens, and underscores"
+            )
+        return v
 
 
 class CleanupResponse(BaseModel):
@@ -211,7 +245,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "dryrun-orchestrator",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -223,8 +257,17 @@ async def list_sample_repos():
     if not repos_path.exists():
         return {"repos": [], "error": "Sample repos path not found"}
 
+    # Handle potential filesystem errors (permissions, etc.)
+    try:
+        repo_entries = list(repos_path.iterdir())
+    except OSError as e:
+        logger.error("Failed to list sample repos", error=str(e))
+        raise HTTPException(
+            status_code=500, detail="Cannot access sample repos directory"
+        )
+
     repos = []
-    for repo_dir in repos_path.iterdir():
+    for repo_dir in repo_entries:
         if repo_dir.is_dir() and not repo_dir.name.startswith("."):
             # Detect language/framework
             language = "unknown"
@@ -386,55 +429,59 @@ async def cleanup_dryrun_session(request: CleanupRequest, _api_key: ApiKeyDep):
         raise HTTPException(status_code=503, detail="Docker client not available")
 
     cleaned_count = 0
+    errors_encountered: list[str] = []
 
     try:
-        # Get containers for this session
-        container_ids = active_sessions.get(session_id, [])
-
-        # Also find containers by label (in case of restarts)
+        # Find containers by label (primary method, works across restarts)
         labeled_containers = docker_client.containers.list(
             all=True, filters={"label": f"dryrun.session_id={session_id}"}
         )
 
-        all_containers = set(container_ids)
-        for container in labeled_containers:
-            all_containers.add(container.id)
-
         # Stop and remove each container
-        for container_id in all_containers:
+        for container in labeled_containers:
             try:
-                container = docker_client.containers.get(container_id)
                 container.stop(timeout=10)
                 container.remove()
                 cleaned_count += 1
-                logger.info("Container removed", container_id=container_id[:12])
+                logger.info("Container removed", container_id=container.id[:12])
             except docker.errors.NotFound:
                 pass  # Already removed
             except docker.errors.APIError as e:
-                logger.error(
-                    "Failed to remove container",
-                    container_id=container_id[:12],
-                    error=str(e),
-                )
+                error_msg = f"Failed to remove container {container.id[:12]}: {e}"
+                logger.error(error_msg)
+                errors_encountered.append(error_msg)
 
-        # Remove the network
-        network_name = f"dryrun-{session_id[:8]}"
-        try:
-            network = docker_client.networks.get(network_name)
-            network.remove()
-            logger.info("Network removed", network_name=network_name)
-        except docker.errors.NotFound:
-            pass
-        except docker.errors.APIError as e:
-            logger.warning(
-                "Failed to remove network", network_name=network_name, error=str(e)
-            )
+        # Remove the network only if all containers were cleaned successfully
+        if not errors_encountered:
+            network_name = f"dryrun-{session_id[:8]}"
+            try:
+                network = docker_client.networks.get(network_name)
+                network.remove()
+                logger.info("Network removed", network_name=network_name)
+            except docker.errors.NotFound:
+                pass  # Network already removed
+            except docker.errors.APIError as e:
+                error_msg = f"Failed to remove network {network_name}: {e}"
+                logger.warning(error_msg)
+                errors_encountered.append(error_msg)
 
         # Clear from tracking
         active_sessions.pop(session_id, None)
 
+        # Report partial failures
+        if errors_encountered:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Cleanup partially failed: {'; '.join(errors_encountered)}",
+            )
+
         return CleanupResponse(cleaned_containers=cleaned_count, session_id=session_id)
 
+    except docker.errors.DockerException as e:
+        logger.error("Docker error during cleanup", error=str(e), session_id=session_id)
+        raise HTTPException(status_code=500, detail=f"Docker error during cleanup: {e}")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
         logger.error("Failed to cleanup dry-run session", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))

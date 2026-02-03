@@ -102,21 +102,23 @@ async function start() {
   }
 }
 
-// Graceful shutdown
-process.on("SIGTERM", async () => {
-  logger.info("Received SIGTERM, shutting down gracefully");
+// Graceful shutdown handler
+async function gracefulShutdown(signal: string): Promise<void> {
+  logger.info(`Received ${signal}, shutting down gracefully`);
   stopCleanupScheduler();
-  await consumer.stop();
-  await db.disconnect();
-  process.exit(0);
-});
 
-process.on("SIGINT", async () => {
-  logger.info("Received SIGINT, shutting down gracefully");
-  stopCleanupScheduler();
-  await consumer.stop();
-  await db.disconnect();
-  process.exit(0);
-});
+  try {
+    await Promise.all([consumer.stop(), db.disconnect()]);
+    logger.info("Resources cleaned up successfully");
+    process.exit(0);
+  } catch (error) {
+    logger.error("Error during graceful shutdown", { error });
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 start();
