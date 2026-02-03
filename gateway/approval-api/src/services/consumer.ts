@@ -117,8 +117,8 @@ class Consumer {
 
     // Create audit entry
     await db.query(
-      `INSERT INTO gateway.audit_log (id, discovery_id, action, details, created_at)
-       VALUES ($1, $2, 'received', $3, NOW())`,
+      `INSERT INTO gateway.audit_log (id, event_type, target_type, target_id, details, event_timestamp)
+       VALUES ($1, 'discovery_received', 'discovery', $2, $3, NOW())`,
       [
         uuidv4(),
         event.id,

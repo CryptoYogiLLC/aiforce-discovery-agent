@@ -17,6 +17,8 @@ import {
   getScanValidation,
   getScanDiscoveriesHandler,
   getScanDiscoveriesValidation,
+  getScanCollectorsHandler,
+  getScanCollectorsValidation,
   getScanEventsHandler,
   getScanEventsValidation,
   triggerInspectionHandler,
@@ -49,6 +51,14 @@ router.get(
   authenticate,
   getScanDiscoveriesValidation,
   getScanDiscoveriesHandler,
+);
+
+// GET /api/scans/:id/collectors - Get collector status (viewer+)
+router.get(
+  "/:id/collectors",
+  authenticate,
+  getScanCollectorsValidation,
+  getScanCollectorsHandler,
 );
 
 // GET /api/scans/:id/events - SSE progress stream (viewer+)

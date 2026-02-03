@@ -106,9 +106,12 @@ router.get(
 
     try {
       const entries = await db.query<AuditLogEntry>(
-        `SELECT * FROM gateway.audit_log
-         WHERE discovery_id = $1
-         ORDER BY created_at DESC`,
+        `SELECT id, event_type AS action, actor_username AS actor,
+                target_type, target_id, details,
+                event_timestamp AS created_at
+         FROM gateway.audit_log
+         WHERE target_type = 'discovery' AND target_id = $1
+         ORDER BY event_timestamp DESC`,
         [req.params.id],
       );
 

@@ -10,7 +10,7 @@ export interface Discovery {
   status: "pending" | "approved" | "rejected";
   reviewed_by: string | null;
   reviewed_at: Date | null;
-  rejection_reason: string | null;
+  review_notes: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -123,9 +123,9 @@ class DiscoveryService {
 
     // Create audit entry
     await db.query(
-      `INSERT INTO gateway.audit_log (id, discovery_id, action, actor, created_at)
-       VALUES ($1, $2, 'approved', $3, NOW())`,
-      [uuidv4(), id, actor],
+      `INSERT INTO gateway.audit_log (id, event_type, actor_username, target_type, target_id, details, event_timestamp)
+       VALUES ($1, 'discovery_approved', $2, 'discovery', $3, '{}', NOW())`,
+      [uuidv4(), actor, id],
     );
 
     logger.info("Discovery approved", { id, actor });
@@ -149,16 +149,16 @@ class DiscoveryService {
     await db.query(
       `UPDATE gateway.discoveries
        SET status = 'rejected', reviewed_by = $2, reviewed_at = NOW(),
-           rejection_reason = $3, updated_at = NOW()
+           review_notes = $3, updated_at = NOW()
        WHERE id = $1`,
       [id, actor, reason],
     );
 
     // Create audit entry
     await db.query(
-      `INSERT INTO gateway.audit_log (id, discovery_id, action, actor, details, created_at)
-       VALUES ($1, $2, 'rejected', $3, $4, NOW())`,
-      [uuidv4(), id, actor, JSON.stringify({ reason })],
+      `INSERT INTO gateway.audit_log (id, event_type, actor_username, target_type, target_id, details, event_timestamp)
+       VALUES ($1, 'discovery_rejected', $2, 'discovery', $3, $4, NOW())`,
+      [uuidv4(), actor, id, JSON.stringify({ reason })],
     );
 
     logger.info("Discovery rejected", { id, actor, reason });

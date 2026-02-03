@@ -54,7 +54,9 @@ export default function InspectionProgress({
   const [collectors, setCollectors] = useState<ScanCollector[]>([]);
   const [currentPhase, setCurrentPhase] = useState<string>("initializing");
   const [overallProgress, setOverallProgress] = useState(0);
-  const [discoveryCount, setDiscoveryCount] = useState(0);
+  const [discoveryCount, setDiscoveryCount] = useState(
+    scan.total_discoveries ?? 0,
+  );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -97,9 +99,7 @@ export default function InspectionProgress({
   const handleCollectorUpdate = useCallback(
     (event: ScanCollectorEvent) => {
       setCollectors((prev) => {
-        const idx = prev.findIndex(
-          (c) => c.collector_name === event.collector_name,
-        );
+        const idx = prev.findIndex((c) => c.collector_name === event.collector);
         if (idx >= 0) {
           const updated = [...prev];
           updated[idx] = {
@@ -114,9 +114,9 @@ export default function InspectionProgress({
         return [
           ...prev,
           {
-            id: event.collector_name,
+            id: event.collector,
             scan_id: scan.id,
-            collector_name: event.collector_name,
+            collector_name: event.collector,
             status: event.status as ScanCollector["status"],
             progress: event.progress,
             discovery_count: event.discovery_count,

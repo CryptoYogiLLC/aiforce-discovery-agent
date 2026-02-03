@@ -730,20 +730,14 @@ async function checkScanCompletion(scanId: string): Promise<void> {
     updates.push("completed_at = NOW()");
   }
 
-  // Update phase status
-  updates.push(
-    `phases = jsonb_set(phases, '{enumeration,status}', '"completed"')`,
-  );
-  updates.push(`phases = jsonb_set(phases, '{enumeration,progress}', '100')`);
+  // Update phase status — nest jsonb_set calls so `phases` is assigned once
+  let phasesExpr = `jsonb_set(jsonb_set(phases, '{enumeration,status}', '"completed"'), '{enumeration,progress}', '100')`;
 
   if (newStatus === "awaiting_inspection") {
-    updates.push(
-      `phases = jsonb_set(phases, '{identification,status}', '"completed"')`,
-    );
-    updates.push(
-      `phases = jsonb_set(phases, '{identification,progress}', '100')`,
-    );
+    phasesExpr = `jsonb_set(jsonb_set(${phasesExpr}, '{identification,status}', '"completed"'), '{identification,progress}', '100')`;
   }
+
+  updates.push(`phases = ${phasesExpr}`);
 
   params.push(scanId);
 

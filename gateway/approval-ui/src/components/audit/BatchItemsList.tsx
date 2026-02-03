@@ -33,8 +33,8 @@ export default function BatchItemsList({
         limit,
         offset,
       });
-      setItems(data.items);
-      setTotal(data.total);
+      setItems(data.items || []);
+      setTotal(data.total || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load items");
     } finally {
@@ -187,7 +187,9 @@ export default function BatchItemsList({
                     fontSize: "0.75rem",
                   }}
                 >
-                  {item.payload_hash.substring(0, 16)}...
+                  {item.payload_hash
+                    ? `${item.payload_hash.substring(0, 16)}...`
+                    : "-"}
                 </td>
                 <td
                   style={{ padding: "0.5rem", color: "var(--text-secondary)" }}

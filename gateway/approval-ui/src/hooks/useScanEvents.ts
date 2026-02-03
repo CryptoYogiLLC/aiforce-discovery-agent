@@ -23,7 +23,7 @@ export interface ScanProgressEvent {
 }
 
 export interface ScanCollectorEvent {
-  collector_name: string;
+  collector: string;
   status: string;
   progress: number;
   discovery_count: number;

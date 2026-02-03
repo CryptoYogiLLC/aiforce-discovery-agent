@@ -56,7 +56,7 @@ export default function ServiceCard({ name, service }: ServiceCardProps) {
               textTransform: "capitalize",
             }}
           >
-            {name.replace(/-/g, " ")}
+            {health.display_name || name.replace(/-/g, " ")}
           </h4>
           {health.version && (
             <span
@@ -152,10 +152,12 @@ export default function ServiceCard({ name, service }: ServiceCardProps) {
         <span>Uptime: {formatUptime(health.uptime_seconds)}</span>
         <span>
           Last check:{" "}
-          {new Date(health.last_check).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {health.last_check
+            ? new Date(health.last_check).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "-"}
         </span>
       </div>
 

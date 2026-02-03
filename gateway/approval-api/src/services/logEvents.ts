@@ -6,7 +6,6 @@
  */
 
 import { EventEmitter } from "events";
-import { logger } from "./logger";
 
 // Log level types
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
@@ -78,7 +77,7 @@ class LogEventEmitter extends EventEmitter {
     const event: LogEvent = { type: "log", data: entry };
     this.emit("log", event);
 
-    logger.debug("Log entry emitted", { service, level });
+    // Debug logging intentionally uses console to avoid circular dependency with logger
   }
 
   /**
@@ -94,12 +93,12 @@ class LogEventEmitter extends EventEmitter {
    */
   subscribe(handler: (event: LogEvent) => void): () => void {
     this.on("log", handler);
-    logger.debug("Log SSE subscriber added");
+    // Subscriber tracking (no logger to avoid circular dependency)
 
     // Return unsubscribe function
     return () => {
       this.off("log", handler);
-      logger.debug("Log SSE subscriber removed");
+      // Subscriber removed (no logger to avoid circular dependency)
     };
   }
 

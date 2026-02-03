@@ -6,7 +6,7 @@ export interface Discovery {
   status: "pending" | "approved" | "rejected";
   reviewed_by: string | null;
   reviewed_at: string | null;
-  rejection_reason: string | null;
+  review_notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -258,6 +258,7 @@ export interface InspectionRequest {
 // Dashboard Types
 export interface ServiceHealth {
   name: string;
+  display_name?: string;
   status: "healthy" | "degraded" | "unhealthy" | "unknown";
   version: string | null;
   uptime_seconds: number | null;
@@ -266,10 +267,10 @@ export interface ServiceHealth {
 }
 
 export interface ServiceMetrics {
-  cpu_percent: number;
-  memory_mb: number;
-  requests_per_minute: number;
-  error_rate: number;
+  cpu_percent: number | null;
+  memory_mb: number | null;
+  requests_per_minute: number | null;
+  error_rate: number | null;
 }
 
 export interface ServiceInfo {

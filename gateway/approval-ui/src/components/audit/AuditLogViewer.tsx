@@ -36,8 +36,8 @@ export default function AuditLogViewer({ isAdmin }: AuditLogViewerProps) {
         limit,
         offset,
       });
-      setLogs(data.logs);
-      setTotal(data.total);
+      setLogs(data.logs || []);
+      setTotal(data.total || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load logs");
     } finally {
@@ -374,7 +374,9 @@ export default function AuditLogViewer({ isAdmin }: AuditLogViewerProps) {
                         fontSize: "0.75rem",
                       }}
                     >
-                      {log.resource_id.substring(0, 8)}...
+                      {log.resource_id
+                        ? `${log.resource_id.substring(0, 8)}...`
+                        : "-"}
                     </span>
                   </td>
                   <td
@@ -387,10 +389,10 @@ export default function AuditLogViewer({ isAdmin }: AuditLogViewerProps) {
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
-                    title={JSON.stringify(log.details)}
+                    title={log.details ? JSON.stringify(log.details) : ""}
                   >
                     {log.details && Object.keys(log.details).length > 0
-                      ? JSON.stringify(log.details).substring(0, 50) + "..."
+                      ? `${JSON.stringify(log.details).substring(0, 50)}...`
                       : "-"}
                   </td>
                 </tr>

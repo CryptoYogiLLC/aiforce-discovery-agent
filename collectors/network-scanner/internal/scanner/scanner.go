@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aiforce-discovery-agent/collectors/network-scanner/internal/callback"
@@ -158,34 +159,72 @@ func (s *Scanner) StartAutonomous(cfg AutonomousScanConfig) error {
 }
 
 func (s *Scanner) runAutonomousScan() {
-	totalSubnets := len(s.config.Subnets)
-	completedSubnets := 0
+	// Count total IPs across all subnets for finer-grained progress
+	var totalIPs int64
+	for _, subnet := range s.config.Subnets {
+		_, ipNet, err := net.ParseCIDR(subnet)
+		if err != nil {
+			continue
+		}
+		ones, bits := ipNet.Mask.Size()
+		totalIPs += 1 << uint(bits-ones)
+	}
+	var scannedIPs int64
 
-	for i, subnet := range s.config.Subnets {
+	// Start periodic progress reporter (every 10s) so the UI stays updated
+	progressDone := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if s.reporter != nil {
+					progress := 0
+					if totalIPs > 0 {
+						progress = int((atomic.LoadInt64(&scannedIPs) * 100) / totalIPs)
+					}
+					if progress > 99 {
+						progress = 99 // Reserve 100 for completion
+					}
+					scanned := atomic.LoadInt64(&scannedIPs)
+					msg := fmt.Sprintf("Scanned %d/%d hosts", scanned, totalIPs)
+					_ = s.reporter.ReportProgress("port_scanning", progress, msg)
+				}
+			case <-progressDone:
+				return
+			case <-s.ctx.Done():
+				return
+			}
+		}
+	}()
+
+	for _, subnet := range s.config.Subnets {
 		select {
 		case <-s.ctx.Done():
+			close(progressDone)
 			s.finishAutonomousScan("cancelled", "Scan was cancelled")
 			return
 		default:
 		}
 
-		// Report subnet progress
-		progress := (i * 100) / totalSubnets
+		// Report subnet start
 		if s.reporter != nil {
-			msg := fmt.Sprintf("Scanning subnet %d/%d: %s", i+1, totalSubnets, subnet)
-			_ = s.reporter.ReportProgress("port_scanning", progress, msg)
+			scanned := atomic.LoadInt64(&scannedIPs)
+			msg := fmt.Sprintf("Scanning %s (%d/%d hosts done)", subnet, scanned, totalIPs)
+			_ = s.reporter.ReportProgress("port_scanning", int((scanned*100)/totalIPs), msg)
 		}
 
 		s.wg.Add(1)
-		s.scanSubnetAutonomous(subnet)
-		completedSubnets++
+		s.scanSubnetAutonomous(subnet, &scannedIPs)
 	}
 
+	close(progressDone)
 	s.wg.Wait()
 	s.finishAutonomousScan("completed", "")
 }
 
-func (s *Scanner) scanSubnetAutonomous(subnet string) {
+func (s *Scanner) scanSubnetAutonomous(subnet string, scannedIPs *int64) {
 	defer s.wg.Done()
 
 	s.logger.Infow("Scanning subnet", "subnet", subnet)
@@ -205,6 +244,7 @@ func (s *Scanner) scanSubnetAutonomous(subnet string) {
 		}
 
 		ipStr := ip.String()
+		atomic.AddInt64(scannedIPs, 1)
 
 		// Skip excluded subnets
 		if s.isExcluded(ipStr) {

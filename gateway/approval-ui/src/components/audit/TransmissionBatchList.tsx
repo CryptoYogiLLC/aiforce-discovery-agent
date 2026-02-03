@@ -38,8 +38,8 @@ export default function TransmissionBatchList({
         limit,
         offset,
       });
-      setBatches(data.batches);
-      setTotal(data.total);
+      setBatches(data.batches || []);
+      setTotal(data.total || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load batches");
     } finally {

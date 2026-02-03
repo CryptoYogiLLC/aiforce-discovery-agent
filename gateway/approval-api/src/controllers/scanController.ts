@@ -327,6 +327,41 @@ export async function getScanDiscoveriesHandler(
 }
 
 /**
+ * GET /api/scans/:id/collectors
+ * Get collector status for a scan
+ */
+export const getScanCollectorsValidation = [
+  param("id").isUUID().withMessage("Valid scan ID is required"),
+];
+
+export async function getScanCollectorsHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+    return;
+  }
+
+  try {
+    const scan = await getScanById(req.params.id);
+    if (!scan) {
+      res.status(404).json({ error: "Scan not found" });
+      return;
+    }
+
+    const collectors = await getScanCollectors(req.params.id);
+    res.json({ collectors });
+  } catch (err) {
+    logger.error("Failed to get scan collectors", {
+      error: (err as Error).message,
+    });
+    res.status(500).json({ error: "Failed to get scan collectors" });
+  }
+}
+
+/**
  * GET /api/scans/:id/events
  * SSE endpoint for real-time scan progress
  */

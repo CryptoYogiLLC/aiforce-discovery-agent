@@ -11,7 +11,14 @@ export default function LogsPage() {
     resume,
     clearLogs,
     connect,
+    disconnect,
   } = useLogStream();
+
+  const handleRefresh = () => {
+    disconnect();
+    clearLogs();
+    connect();
+  };
 
   return (
     <div>
@@ -30,11 +37,9 @@ export default function LogsPage() {
             Real-time log feed from all services
           </p>
         </div>
-        {!isConnected && reconnectAttempts > 0 && (
-          <button onClick={connect} className="btn btn-primary">
-            Reconnect
-          </button>
-        )}
+        <button onClick={handleRefresh} className="btn btn-outline">
+          Refresh
+        </button>
       </div>
 
       {/* Connection error */}
