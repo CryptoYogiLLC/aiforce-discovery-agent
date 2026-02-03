@@ -335,6 +335,73 @@ discovered.* → [Unified Processor] → scored.*
 
 ---
 
+## Pattern: Candidate Flags in Metadata (Added 2026-02-03)
+
+**Problem**: Where to put candidate identification flags in enriched events?
+**Context**: When processor identifies a service as a database candidate.
+
+**Solution**: Store candidate flags in `data.metadata` (NOT top-level fields):
+
+```json
+{
+  "type": "discovery.service.enriched",
+  "data": {
+    "ip_address": "192.168.1.10",
+    "port": 5432,
+    "service": "postgresql",
+    "metadata": {
+      "database_candidate": true,
+      "candidate_confidence": 0.95,
+      "candidate_reason": "Port 5432 + PostgreSQL banner detected"
+    }
+  }
+}
+```
+
+**Why**:
+
+- UI can filter on `data.metadata.database_candidate`
+- Schema validation remains clean (metadata is flexible object)
+- Consistent field paths for DB inspector selection
+
+**Source**: Session 2026-02-03 / ADR-007
+
+---
+
+## Pattern: Callback-Based Orchestration (Added 2026-02-03)
+
+**Problem**: How should orchestration track collector progress?
+**Context**: Scan orchestration in approval-api triggering multiple collectors.
+
+**Solution**: Use HTTP callbacks for orchestration, event bus for data flow:
+
+```
+Orchestration Flow (HTTP callbacks for control):
+  approval-api --POST config--> network-scanner
+  network-scanner --POST progress--> approval-api (callback)
+
+Event Bus Flow (parallel, for discovery data):
+  network-scanner --publish--> discovery.server.discovered
+  processor --subscribe--> discovery.server.discovered
+```
+
+**Why**:
+
+- Orchestration needs request-response semantics
+- Progress tracking requires correlation with scan_id
+- Event bus is for discovery data flow, not control flow
+
+**Callback Contract**:
+
+- All collectors use shared `INTERNAL_API_KEY` from environment
+- Progress: last-write-wins by timestamp
+- Complete: first-write-wins
+- Start: idempotent (return current status if already started)
+
+**Source**: Session 2026-02-03 / ADR-007, Issue #108
+
+---
+
 ## Search Keywords
 
-events, cloudevents, rabbitmq, queue, dlq, idempotent, event-driven, exchange, topology, processor
+events, cloudevents, rabbitmq, queue, dlq, idempotent, event-driven, exchange, topology, processor, candidate, metadata, callback, orchestration
