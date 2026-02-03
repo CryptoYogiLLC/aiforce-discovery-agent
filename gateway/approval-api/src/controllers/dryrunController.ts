@@ -593,3 +593,51 @@ export async function completeSessionHandler(
     res.status(500).json({ error: "Failed to complete session" });
   }
 }
+
+/**
+ * Cleanup management endpoints
+ */
+
+import { getCleanupStatus, forceCleanupCycle } from "../services/dryrunCleanup";
+
+/**
+ * GET /api/dryrun/cleanup/status
+ * Get cleanup scheduler status (admin only)
+ */
+export async function getCleanupStatusHandler(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  try {
+    const status = getCleanupStatus();
+    res.json(status);
+  } catch (err) {
+    logger.error("Failed to get cleanup status", {
+      error: (err as Error).message,
+    });
+    res.status(500).json({ error: "Failed to get cleanup status" });
+  }
+}
+
+/**
+ * POST /api/dryrun/cleanup/force
+ * Force a cleanup cycle (admin only)
+ */
+export async function forceCleanupHandler(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  try {
+    logger.info("Forcing cleanup cycle");
+    const result = await forceCleanupCycle();
+    res.json({
+      message: "Cleanup cycle completed",
+      ...result,
+    });
+  } catch (err) {
+    logger.error("Failed to force cleanup cycle", {
+      error: (err as Error).message,
+    });
+    res.status(500).json({ error: "Failed to force cleanup cycle" });
+  }
+}

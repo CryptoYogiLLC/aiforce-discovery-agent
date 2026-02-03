@@ -1,0 +1,69 @@
+# =============================================================================
+# DRY-RUN MODE OVERLAY
+# =============================================================================
+# This compose file provides configuration for dry-run testing mode.
+# It mounts sample code repositories for the code-analyzer to scan.
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.dryrun.yml --profile code up -d
+#
+# Or with generated test environment:
+#   docker-compose -f docker-compose.yml -f docker-compose.dryrun.yml -f docker-compose.generated.yml --profile code up -d
+# =============================================================================
+
+services:
+  # Override code-analyzer to mount sample repositories
+  code-analyzer:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mount sample repos for dry-run testing (replaces code_repos volume)
+      - ./sample-repos:/repos:ro
+    environment:
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      # Enable dry-run mode scanning
+      DRYRUN_MODE: "true"
+      SAMPLE_REPOS_PATH: /repos
+
+  # Add dryrun-orchestrator service for managing dry-run sessions
+  dryrun-orchestrator:
+    build:
+      context: ./platform/dryrun-orchestrator
+      dockerfile: Dockerfile
+    container_name: discovery-dryrun-orchestrator
+    profiles: ["dryrun", "all"]
+    ports:
+      - "8030:8030"
+    environment:
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-discovery}:${POSTGRES_PASSWORD:-discovery}@postgres:5432/discovery_agent
+      RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Sample repos configuration
+      SAMPLE_REPOS_PATH: /repos
+      # Container management
+      DOCKER_NETWORK: discovery-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./sample-repos:/repos:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8030/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - discovery-network
+    restart: unless-stopped
+
+networks:
+  discovery-network:
+    external: true
+    name: discovery-network

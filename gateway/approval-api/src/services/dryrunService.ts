@@ -524,9 +524,15 @@ export async function cleanupOldSessions(): Promise<number> {
 
 /**
  * Mark session as completed (called by collector when done)
+ * Schedules automatic cleanup after 30 minutes
  */
 export async function markSessionCompleted(sessionId: string): Promise<void> {
   await updateSessionStatus(sessionId, "completed");
+
+  // Schedule cleanup after 30 minutes
+  // Import dynamically to avoid circular dependency
+  const { scheduleCleanup } = await import("./dryrunCleanup");
+  await scheduleCleanup(sessionId, 30 * 60 * 1000);
 }
 
 /**

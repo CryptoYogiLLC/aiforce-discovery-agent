@@ -14,6 +14,10 @@ import dryrunRoutes from "./routes/dryrun";
 import dashboardRoutes from "./routes/dashboard";
 import auditTrailRoutes from "./routes/auditTrail";
 import { runMigrations } from "./db/migrate";
+import {
+  startCleanupScheduler,
+  stopCleanupScheduler,
+} from "./services/dryrunCleanup";
 
 const app = express();
 
@@ -88,6 +92,10 @@ async function start() {
         `Approval API listening on ${config.server.host}:${config.server.port}`,
       );
     });
+
+    // Start dry-run cleanup scheduler
+    startCleanupScheduler();
+    logger.info("Dry-run cleanup scheduler started");
   } catch (error) {
     logger.error("Failed to start server", { error });
     process.exit(1);
@@ -97,6 +105,7 @@ async function start() {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   logger.info("Received SIGTERM, shutting down gracefully");
+  stopCleanupScheduler();
   await consumer.stop();
   await db.disconnect();
   process.exit(0);
@@ -104,6 +113,7 @@ process.on("SIGTERM", async () => {
 
 process.on("SIGINT", async () => {
   logger.info("Received SIGINT, shutting down gracefully");
+  stopCleanupScheduler();
   await consumer.stop();
   await db.disconnect();
   process.exit(0);

@@ -61,6 +61,7 @@ repos:
       - id: eslint
         files: \.[jt]sx?$
         types: [file]
+        exclude: ^(scripts/db-init/|test-fixtures/|sample-repos/)
         additional_dependencies:
           - eslint@8.56.0
           - eslint-config-prettier@9.1.0
@@ -73,7 +74,7 @@ repos:
     hooks:
       - id: prettier
         types_or: [javascript, jsx, ts, tsx, json, yaml, markdown]
-        exclude: ^(CHANGELOG\.md|package-lock\.json|deploy/helm/)
+        exclude: ^(CHANGELOG\.md|package-lock\.json|deploy/helm/|scripts/db-init/|test-fixtures/|sample-repos/)
 
   # Docker - hadolint (requires hadolint installed locally)
   - repo: local
