@@ -207,10 +207,14 @@ def generate_database_env(db_type, db_name):
     return {}
 
 
-def generate_environment():
-    """Generate randomized test environment configuration."""
+def generate_environment(seed: int | None = None):
+    """Generate randomized test environment configuration.
 
-    seed = int(datetime.now().timestamp())
+    Args:
+        seed: Optional seed for reproducibility. If None, uses current timestamp.
+    """
+    if seed is None:
+        seed = int(datetime.now().timestamp())
     random.seed(seed)
 
     used_ips = {"172.28.0.1"}  # Gateway
@@ -448,7 +452,12 @@ def generate_manifest(compose, seed):
     return manifest
 
 
-def main():
+def main(seed: int | None = None):
+    """Generate test environment.
+
+    Args:
+        seed: Optional seed for reproducibility. If None, uses current timestamp.
+    """
     script_dir = Path(__file__).parent.parent
 
     print("=" * 60)
@@ -456,7 +465,7 @@ def main():
     print("=" * 60)
 
     # Generate environment
-    compose, seed = generate_environment()
+    compose, seed = generate_environment(seed)
     manifest = generate_manifest(compose, seed)
 
     # Write docker-compose file
@@ -504,12 +513,16 @@ def main():
 
 
 if __name__ == "__main__":
-    import sys
+    import argparse
 
-    # Support --seed argument for reproducibility
-    if "--seed" in sys.argv:
-        idx = sys.argv.index("--seed")
-        if idx + 1 < len(sys.argv):
-            random.seed(int(sys.argv[idx + 1]))
+    parser = argparse.ArgumentParser(
+        description="Generate randomized test environment for dry-run testing"
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="Seed for reproducible environment generation",
+    )
+    args = parser.parse_args()
 
-    main()
+    main(seed=args.seed)

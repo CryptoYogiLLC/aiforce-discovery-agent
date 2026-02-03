@@ -1,4 +1,13 @@
-import type { Discovery, AuditLogEntry, PaginatedResult } from "../types";
+import type {
+  Discovery,
+  AuditLogEntry,
+  PaginatedResult,
+  DryrunSession,
+  DryrunSessionSummary,
+  DryrunDiscovery,
+  DryrunContainer,
+  ConfigProfile,
+} from "../types";
 
 const API_BASE = "/api";
 
@@ -95,6 +104,95 @@ export const api = {
 
     getForDiscovery: (discoveryId: string): Promise<AuditLogEntry[]> => {
       return fetchJSON(`${API_BASE}/audit/discovery/${discoveryId}`);
+    },
+  },
+
+  dryrun: {
+    // Session management
+    listSessions: (params?: {
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }): Promise<{ sessions: DryrunSessionSummary[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.status) searchParams.set("status", params.status);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(`${API_BASE}/dryrun/sessions?${searchParams}`);
+    },
+
+    getSession: (id: string): Promise<DryrunSession> => {
+      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}`);
+    },
+
+    createSession: (profileId: string): Promise<DryrunSession> => {
+      return fetchJSON(`${API_BASE}/dryrun/sessions`, {
+        method: "POST",
+        body: JSON.stringify({ profile_id: profileId }),
+      });
+    },
+
+    startSession: (id: string): Promise<DryrunSession> => {
+      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}/start`, {
+        method: "POST",
+      });
+    },
+
+    stopSession: (id: string): Promise<DryrunSession> => {
+      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}/stop`, {
+        method: "POST",
+      });
+    },
+
+    // Discoveries
+    getDiscoveries: (
+      sessionId: string,
+      params?: {
+        source?: string;
+        status?: string;
+        limit?: number;
+        offset?: number;
+      },
+    ): Promise<{ discoveries: DryrunDiscovery[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.source) searchParams.set("source", params.source);
+      if (params?.status) searchParams.set("status", params.status);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(
+        `${API_BASE}/dryrun/sessions/${sessionId}/discoveries?${searchParams}`,
+      );
+    },
+
+    reviewDiscovery: (
+      discoveryId: string,
+      status: "approved" | "rejected",
+      notes?: string,
+    ): Promise<DryrunDiscovery> => {
+      return fetchJSON(`${API_BASE}/dryrun/discoveries/${discoveryId}/review`, {
+        method: "POST",
+        body: JSON.stringify({ status, notes }),
+      });
+    },
+
+    // Containers
+    getContainers: (sessionId: string): Promise<DryrunContainer[]> => {
+      return fetchJSON(`${API_BASE}/dryrun/sessions/${sessionId}/containers`);
+    },
+
+    // Export
+    exportSession: (sessionId: string): Promise<object> => {
+      return fetchJSON(`${API_BASE}/dryrun/sessions/${sessionId}/export`);
+    },
+  },
+
+  profiles: {
+    list: (): Promise<ConfigProfile[]> => {
+      return fetchJSON(`${API_BASE}/profiles`);
+    },
+
+    get: (id: string): Promise<ConfigProfile> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}`);
     },
   },
 };

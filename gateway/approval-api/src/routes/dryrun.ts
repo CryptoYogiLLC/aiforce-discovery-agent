@@ -29,6 +29,8 @@ import {
   registerContainerValidation,
   completeSessionHandler,
   completeSessionValidation,
+  getCleanupStatusHandler,
+  forceCleanupHandler,
 } from "../controllers/dryrunController";
 import { authenticate, validateCsrf, requireRole } from "../middleware/auth";
 
@@ -149,6 +151,27 @@ router.post(
   requireRole("operator"),
   completeSessionValidation,
   completeSessionHandler,
+);
+
+/**
+ * Admin endpoints (for cleanup management)
+ */
+
+// GET /api/dryrun/cleanup/status - Get cleanup scheduler status (admin only)
+router.get(
+  "/cleanup/status",
+  authenticate,
+  requireRole("admin"),
+  getCleanupStatusHandler,
+);
+
+// POST /api/dryrun/cleanup/force - Force a cleanup cycle (admin only)
+router.post(
+  "/cleanup/force",
+  authenticate,
+  validateCsrf,
+  requireRole("admin"),
+  forceCleanupHandler,
 );
 
 export default router;

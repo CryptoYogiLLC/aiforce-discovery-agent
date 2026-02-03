@@ -1,0 +1,7 @@
+# Gitleaks ignore file
+# These are intentional test fixtures in sample repositories, not real secrets
+
+# Sample repos test fixtures
+sample-repos/python-django/myapp/tests.py:hashicorp-tf-password:84
+sample-repos/python-django/myapp/tests.py:hashicorp-tf-password:113
+sample-repos/python-django/myapp/tests.py:hashicorp-tf-password:174

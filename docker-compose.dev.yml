@@ -91,6 +91,8 @@ services:
       MYSQL_DATABASE: legacy_crm
       MYSQL_USER: crm_user
       MYSQL_PASSWORD: crm_password
+    volumes:
+      - ./test-fixtures/mysql-init:/docker-entrypoint-initdb.d:ro
     networks:
       target-network:
         ipv4_address: 172.28.0.31
@@ -104,6 +106,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: analytics_admin
       MONGO_INITDB_ROOT_PASSWORD: analytics_password
+    volumes:
+      - ./test-fixtures/mongodb-init:/docker-entrypoint-initdb.d:ro
     networks:
       target-network:
         ipv4_address: 172.28.0.32
