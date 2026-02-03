@@ -118,3 +118,37 @@ export interface DryrunStartOptions {
   profile_id: string;
   seed?: number;
 }
+
+// User Management Types
+export type UserRole = "admin" | "operator" | "viewer";
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserListResult {
+  users: User[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateUserInput {
+  username: string;
+  email: string;
+  password: string;
+  role?: UserRole;
+}
+
+export interface UpdateUserInput {
+  email?: string;
+  role?: UserRole;
+  is_active?: boolean;
+}

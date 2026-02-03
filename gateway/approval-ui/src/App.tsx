@@ -5,6 +5,7 @@ import DiscoveryDetail from "./pages/DiscoveryDetail";
 import DryRunPage from "./pages/DryRunPage";
 import DryRunSessionDetail from "./pages/DryRunSessionDetail";
 import LoginPage from "./pages/LoginPage";
+import UsersPage from "./pages/UsersPage";
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   const location = useLocation();
@@ -97,6 +98,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
+  const { hasPermission } = useAuth();
+
   return (
     <div>
       <header className="header">
@@ -115,6 +118,9 @@ function AppContent() {
               <nav style={{ display: "flex", gap: "0.5rem" }}>
                 <NavLink to="/">Discoveries</NavLink>
                 <NavLink to="/dryrun">Dry-Run</NavLink>
+                {hasPermission("user:view") && (
+                  <NavLink to="/users">Users</NavLink>
+                )}
               </nav>
               <div
                 style={{
@@ -147,6 +153,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <DryRunSessionDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <UsersPage />
               </ProtectedRoute>
             }
           />
