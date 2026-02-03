@@ -1,8 +1,10 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import DiscoveryList from "./pages/DiscoveryList";
 import DiscoveryDetail from "./pages/DiscoveryDetail";
 import DryRunPage from "./pages/DryRunPage";
 import DryRunSessionDetail from "./pages/DryRunSessionDetail";
+import LoginPage from "./pages/LoginPage";
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   const location = useLocation();
@@ -26,7 +28,75 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   );
 }
 
-function App() {
+function UserMenu() {
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <span style={{ color: "var(--text-secondary)" }}>...</span>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        to="/login"
+        className="btn btn-primary"
+        style={{
+          padding: "0.5rem 1rem",
+          fontSize: "0.875rem",
+          textDecoration: "none",
+        }}
+      >
+        Sign In
+      </Link>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+      <span
+        style={{
+          color: "var(--text-secondary)",
+          fontSize: "0.875rem",
+        }}
+      >
+        {user?.username}
+      </span>
+      <button
+        onClick={() => logout()}
+        style={{
+          padding: "0.5rem 1rem",
+          fontSize: "0.875rem",
+          backgroundColor: "transparent",
+          border: "1px solid var(--border-color)",
+          borderRadius: "6px",
+          cursor: "pointer",
+          color: "var(--text-secondary)",
+        }}
+      >
+        Sign Out
+      </button>
+    </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: "center", padding: "2rem" }}>Loading...</div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppContent() {
   return (
     <div>
       <header className="header">
@@ -41,23 +111,56 @@ function App() {
             <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
               <h1>Discovery Approval Gateway</h1>
             </Link>
-            <nav style={{ display: "flex", gap: "0.5rem" }}>
-              <NavLink to="/">Discoveries</NavLink>
-              <NavLink to="/dryrun">Dry-Run</NavLink>
-            </nav>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <nav style={{ display: "flex", gap: "0.5rem" }}>
+                <NavLink to="/">Discoveries</NavLink>
+                <NavLink to="/dryrun">Dry-Run</NavLink>
+              </nav>
+              <div
+                style={{
+                  width: "1px",
+                  height: "24px",
+                  backgroundColor: "var(--border-color)",
+                }}
+              />
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>
 
       <main className="container">
         <Routes>
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<DiscoveryList />} />
           <Route path="/discovery/:id" element={<DiscoveryDetail />} />
-          <Route path="/dryrun" element={<DryRunPage />} />
-          <Route path="/dryrun/:sessionId" element={<DryRunSessionDetail />} />
+          <Route
+            path="/dryrun"
+            element={
+              <ProtectedRoute>
+                <DryRunPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dryrun/:sessionId"
+            element={
+              <ProtectedRoute>
+                <DryRunSessionDetail />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

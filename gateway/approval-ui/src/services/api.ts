@@ -187,8 +187,11 @@ export const api = {
   },
 
   profiles: {
-    list: (): Promise<ConfigProfile[]> => {
-      return fetchJSON(`${API_BASE}/profiles`);
+    list: async (): Promise<ConfigProfile[]> => {
+      const data = await fetchJSON<{ profiles: ConfigProfile[] }>(
+        `${API_BASE}/profiles`,
+      );
+      return data.profiles;
     },
 
     get: (id: string): Promise<ConfigProfile> => {
