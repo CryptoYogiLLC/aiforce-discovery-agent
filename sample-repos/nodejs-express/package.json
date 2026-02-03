@@ -20,7 +20,7 @@
     "express-validator": "^7.0.1",
     "winston": "^3.10.0",
     "dotenv": "^16.3.0",
-    "lodash": "4.17.20"
+    "lodash": "4.17.23"
   },
   "devDependencies": {
     "jest": "^29.7.0",
