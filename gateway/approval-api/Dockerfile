@@ -28,6 +28,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
+# Copy migrations for auto-apply on startup
+COPY migrations/ ./migrations/
+
 # Use existing node user (uid 1000) for security
 RUN chown -R node:node /app
 

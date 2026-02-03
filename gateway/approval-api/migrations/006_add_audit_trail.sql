@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS gateway.transmission_items (
 );
 
 -- Comprehensive audit log (append-only)
+-- Drop old audit_log table from 001 migration (different schema)
+DROP TABLE IF EXISTS gateway.audit_log CASCADE;
+
 CREATE TABLE IF NOT EXISTS gateway.audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type gateway.audit_event_type NOT NULL,
@@ -205,10 +208,15 @@ SELECT
 FROM gateway.transmission_batches b
 LEFT JOIN gateway.users u ON b.created_by = u.id;
 
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE ON gateway.transmission_batches TO approval_api;
-GRANT SELECT, INSERT ON gateway.transmission_items TO approval_api;
-GRANT SELECT, INSERT ON gateway.audit_log TO approval_api;
-GRANT SELECT, INSERT ON gateway.payload_access_log TO approval_api;
-GRANT SELECT ON gateway.transmission_summary TO approval_api;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA gateway TO approval_api;
+-- Grant permissions (skip if role doesn't exist in development)
+DO $$ BEGIN
+    GRANT SELECT, INSERT, UPDATE ON gateway.transmission_batches TO approval_api;
+    GRANT SELECT, INSERT ON gateway.transmission_items TO approval_api;
+    GRANT SELECT, INSERT ON gateway.audit_log TO approval_api;
+    GRANT SELECT, INSERT ON gateway.payload_access_log TO approval_api;
+    GRANT SELECT ON gateway.transmission_summary TO approval_api;
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA gateway TO approval_api;
+EXCEPTION
+    WHEN undefined_object THEN
+        RAISE NOTICE 'Role approval_api does not exist, skipping grants';
+END $$;

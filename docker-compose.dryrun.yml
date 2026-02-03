@@ -58,6 +58,9 @@ services:
       DRYRUN_LOG_LEVEL: ${LOG_LEVEL:-info}
       # Sample repos configuration
       DRYRUN_SAMPLE_REPOS_PATH: /repos
+      # Host path for mounting repos in dynamically created containers
+      # IMPORTANT: Must be absolute path on host machine, not container path
+      DRYRUN_SAMPLE_REPOS_HOST_PATH: ${DRYRUN_SAMPLE_REPOS_HOST_PATH:-${PWD}/sample-repos}
       # Container management
       DRYRUN_DOCKER_NETWORK: discovery-network
     volumes:

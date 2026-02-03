@@ -169,9 +169,14 @@ LEFT JOIN gateway.users u ON s.started_by = u.id
 LEFT JOIN gateway.dryrun_discoveries d ON s.id = d.session_id
 GROUP BY s.id, p.name, u.username;
 
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.dryrun_sessions TO approval_api;
-GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.dryrun_discoveries TO approval_api;
-GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.dryrun_containers TO approval_api;
-GRANT SELECT ON gateway.dryrun_session_summary TO approval_api;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA gateway TO approval_api;
+-- Grant permissions (skip if role doesn't exist in development)
+DO $$ BEGIN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.dryrun_sessions TO approval_api;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.dryrun_discoveries TO approval_api;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.dryrun_containers TO approval_api;
+    GRANT SELECT ON gateway.dryrun_session_summary TO approval_api;
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA gateway TO approval_api;
+EXCEPTION
+    WHEN undefined_object THEN
+        RAISE NOTICE 'Role approval_api does not exist, skipping grants';
+END $$;

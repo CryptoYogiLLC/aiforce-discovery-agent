@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     # Non-sensitive settings with safe defaults
     log_level: str = "info"
     sample_repos_path: str = "/repos"
+    # Host path for mounting repos in new containers (required when running in container)
+    # When orchestrator runs in a container, it sees /repos but needs host path for mounts
+    sample_repos_host_path: str = ""  # If empty, uses sample_repos_path
     docker_network: str = "discovery-network"
 
     class Config:
@@ -344,6 +347,12 @@ async def start_dryrun_session(request: StartSessionRequest, _api_key: ApiKeyDep
             d for d in repos_path.iterdir() if d.is_dir() and not d.name.startswith(".")
         ]
 
+        # Determine host path for volume mounts
+        # When running in a container, we need the actual host path, not container path
+        host_repos_path = Path(
+            settings.sample_repos_host_path or settings.sample_repos_path
+        )
+
         containers = []
         container_ids = []
 
@@ -365,6 +374,8 @@ async def start_dryrun_session(request: StartSessionRequest, _api_key: ApiKeyDep
                 image = "alpine:latest"
 
             try:
+                # Compute host path for volume mount
+                host_repo_path = host_repos_path / repo.name
                 container = docker_client.containers.run(
                     image,
                     name=container_name,
@@ -372,7 +383,7 @@ async def start_dryrun_session(request: StartSessionRequest, _api_key: ApiKeyDep
                     detach=True,
                     network=network_name,
                     volumes={
-                        str(repo.absolute()): {
+                        str(host_repo_path): {
                             "bind": f"/app/{repo.name}",
                             "mode": "ro",
                         }

@@ -134,7 +134,12 @@ INSERT INTO gateway.config_profiles (
 )
 ON CONFLICT (name) DO NOTHING;
 
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.config_profiles TO approval_api;
-GRANT SELECT, INSERT ON gateway.scan_configs TO approval_api;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA gateway TO approval_api;
+-- Grant permissions (skip if role doesn't exist in development)
+DO $$ BEGIN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON gateway.config_profiles TO approval_api;
+    GRANT SELECT, INSERT ON gateway.scan_configs TO approval_api;
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA gateway TO approval_api;
+EXCEPTION
+    WHEN undefined_object THEN
+        RAISE NOTICE 'Role approval_api does not exist, skipping grants';
+END $$;

@@ -199,6 +199,9 @@ services:
       REDIS_URL: redis://redis:6379
       NODE_ENV: ${NODE_ENV:-production}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Default admin password for initial setup (min 12 chars for security)
+      # Set in .env for production, or leave unset to use locked placeholder
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
     depends_on:
       rabbitmq:
         condition: service_healthy

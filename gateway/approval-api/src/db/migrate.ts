@@ -111,9 +111,11 @@ async function seedDefaultAdmin(): Promise<void> {
     "SELECT id, password_hash FROM gateway.users WHERE username = 'admin'",
   );
 
-  // Placeholder hash used in migration file
-  const placeholderHash =
-    "$argon2id$v=19$m=65536,t=3,p=4$placeholder$placeholder";
+  // Placeholder hashes used in migration files (locked account markers)
+  const placeholderPatterns = [
+    "$argon2id$v=19$m=65536,t=3,p=4$placeholder$placeholder",
+    "$argon2id$v=19$m=65536,t=3,p=4$INVALID$LOCKED_ACCOUNT_RUN_SEED_SCRIPT",
+  ];
 
   if (result.rows.length === 0) {
     // Admin doesn't exist, create it
@@ -134,7 +136,10 @@ async function seedDefaultAdmin(): Promise<void> {
     const storedHash = (result.rows[0] as Record<string, unknown>)
       .password_hash as string;
 
-    if (storedHash === placeholderHash) {
+    // Check if stored hash is any of the placeholder patterns (locked account)
+    const isPlaceholder = placeholderPatterns.some((p) => storedHash === p);
+
+    if (isPlaceholder) {
       // Update placeholder hash with real one
       const passwordHash = await argon2.hash(defaultPassword, {
         type: argon2.argon2id,
@@ -163,19 +168,18 @@ export async function runMigrations(): Promise<void> {
 
     if (pending.length === 0) {
       logger.info("No pending migrations");
-      return;
+    } else {
+      logger.info("Running migrations", { count: pending.length });
+
+      for (const migration of pending) {
+        await runMigration(migration);
+      }
+
+      logger.info("All migrations completed");
     }
 
-    logger.info("Running migrations", { count: pending.length });
-
-    for (const migration of pending) {
-      await runMigration(migration);
-    }
-
-    // Seed default admin after migrations
+    // Always check if admin needs seeding (even if no migrations ran)
     await seedDefaultAdmin();
-
-    logger.info("All migrations completed");
   } catch (err) {
     logger.error("Migration failed", { error: (err as Error).message });
     throw err;
