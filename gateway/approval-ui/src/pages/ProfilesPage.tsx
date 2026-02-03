@@ -319,10 +319,10 @@ export default function ProfilesPage() {
                       fontSize: "0.75rem",
                     }}
                   >
-                    {profile.config.target_subnets?.length || 0} configured
+                    {profile.config?.target_subnets?.length || 0} configured
                   </td>
                   <td style={{ padding: "0.75rem 1rem", fontSize: "0.875rem" }}>
-                    {profile.config.enabled_collectors?.join(", ") || "None"}
+                    {profile.config?.enabled_collectors?.join(", ") || "None"}
                   </td>
                   <td style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
                     <div
