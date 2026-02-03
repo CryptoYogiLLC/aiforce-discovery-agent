@@ -104,7 +104,7 @@ export default function RabbitMQPanel({
             Total Messages
           </div>
           <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-            {metrics.total_messages.toLocaleString()}
+            {metrics.total_messages?.toLocaleString() ?? "-"}
           </div>
         </div>
         <div
@@ -118,13 +118,13 @@ export default function RabbitMQPanel({
             Total Consumers
           </div>
           <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-            {metrics.total_consumers}
+            {metrics.total_consumers ?? "-"}
           </div>
         </div>
       </div>
 
       {/* Queue table */}
-      {metrics.queues.length > 0 ? (
+      {metrics.queues && metrics.queues.length > 0 ? (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", fontSize: "0.875rem" }}>
             <thead>
@@ -196,11 +196,17 @@ export default function RabbitMQPanel({
                         padding: "0.5rem",
                         textAlign: "right",
                         borderBottom: "1px solid var(--border-color)",
-                        fontWeight: queue.messages > 100 ? 600 : 400,
-                        color: queue.messages > 1000 ? "#dc2626" : "inherit",
+                        fontWeight:
+                          queue.messages != null && queue.messages > 100
+                            ? 600
+                            : 400,
+                        color:
+                          queue.messages != null && queue.messages > 1000
+                            ? "#dc2626"
+                            : "inherit",
                       }}
                     >
-                      {queue.messages.toLocaleString()}
+                      {queue.messages?.toLocaleString() ?? "-"}
                     </td>
                     <td
                       style={{
@@ -213,7 +219,7 @@ export default function RabbitMQPanel({
                             : "var(--text-secondary)",
                       }}
                     >
-                      {queue.consumers}
+                      {queue.consumers ?? "-"}
                     </td>
                     <td
                       style={{
@@ -223,7 +229,7 @@ export default function RabbitMQPanel({
                         color: "var(--text-secondary)",
                       }}
                     >
-                      {queue.message_rate.toFixed(1)}
+                      {queue.message_rate?.toFixed(1) ?? "-"}
                     </td>
                     <td
                       style={{

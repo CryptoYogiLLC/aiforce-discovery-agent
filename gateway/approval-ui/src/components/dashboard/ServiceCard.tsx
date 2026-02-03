@@ -107,26 +107,31 @@ export default function ServiceCard({ name, service }: ServiceCardProps) {
           <div>
             <span style={{ color: "var(--text-secondary)" }}>CPU</span>
             <div style={{ fontWeight: 500 }}>
-              {metrics.cpu_percent.toFixed(1)}%
+              {metrics.cpu_percent?.toFixed(1) ?? "-"}%
             </div>
           </div>
           <div>
             <span style={{ color: "var(--text-secondary)" }}>Memory</span>
-            <div style={{ fontWeight: 500 }}>{metrics.memory_mb} MB</div>
+            <div style={{ fontWeight: 500 }}>{metrics.memory_mb ?? "-"} MB</div>
           </div>
           <div>
             <span style={{ color: "var(--text-secondary)" }}>Requests/min</span>
-            <div style={{ fontWeight: 500 }}>{metrics.requests_per_minute}</div>
+            <div style={{ fontWeight: 500 }}>
+              {metrics.requests_per_minute ?? "-"}
+            </div>
           </div>
           <div>
             <span style={{ color: "var(--text-secondary)" }}>Error Rate</span>
             <div
               style={{
                 fontWeight: 500,
-                color: metrics.error_rate > 5 ? "#dc2626" : "inherit",
+                color:
+                  metrics.error_rate != null && metrics.error_rate > 5
+                    ? "#dc2626"
+                    : "inherit",
               }}
             >
-              {metrics.error_rate.toFixed(2)}%
+              {metrics.error_rate?.toFixed(2) ?? "-"}%
             </div>
           </div>
         </div>

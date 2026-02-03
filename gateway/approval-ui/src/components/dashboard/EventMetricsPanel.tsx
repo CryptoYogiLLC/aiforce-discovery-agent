@@ -88,7 +88,7 @@ export default function EventMetricsPanel({
               color: "var(--primary-color)",
             }}
           >
-            {metrics.events_per_second.toFixed(1)}
+            {metrics.events_per_second?.toFixed(1) ?? "-"}
           </div>
         </div>
 
@@ -97,7 +97,7 @@ export default function EventMetricsPanel({
           style={{
             padding: "1rem",
             backgroundColor:
-              metrics.error_rate > 5
+              metrics.error_rate != null && metrics.error_rate > 5
                 ? "rgba(239, 68, 68, 0.1)"
                 : "var(--background)",
             borderRadius: "8px",
@@ -116,10 +116,13 @@ export default function EventMetricsPanel({
             style={{
               fontSize: "1.5rem",
               fontWeight: 700,
-              color: metrics.error_rate > 5 ? "#dc2626" : "#22c55e",
+              color:
+                metrics.error_rate != null && metrics.error_rate > 5
+                  ? "#dc2626"
+                  : "#22c55e",
             }}
           >
-            {metrics.error_rate.toFixed(2)}%
+            {metrics.error_rate?.toFixed(2) ?? "-"}%
           </div>
         </div>
 
@@ -141,7 +144,7 @@ export default function EventMetricsPanel({
             Events Today
           </div>
           <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-            {metrics.events_today.toLocaleString()}
+            {metrics.events_today?.toLocaleString() ?? "-"}
           </div>
         </div>
 
@@ -163,7 +166,7 @@ export default function EventMetricsPanel({
             Last Hour
           </div>
           <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>
-            {metrics.events_last_hour.toLocaleString()}
+            {metrics.events_last_hour?.toLocaleString() ?? "-"}
           </div>
         </div>
       </div>
