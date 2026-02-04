@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,9 +22,8 @@ type Reporter struct {
 	apiKey         string
 	logger         *zap.SugaredLogger
 	client         *http.Client
-	sequence       int64  // Monotonic counter for idempotency
+	sequence       int64 // Monotonic counter for idempotency
 	discoveryCount int64
-	mu             sync.RWMutex
 }
 
 // Progress represents a progress update.
