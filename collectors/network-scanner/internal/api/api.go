@@ -94,8 +94,42 @@ func (s *Server) readyHandler(c *gin.Context) {
 	})
 }
 
-// Start scan handler
+// Start scan handler - supports both legacy (no body) and autonomous (with body) modes
 func (s *Server) startScanHandler(c *gin.Context) {
+	var req StartScanRequest
+
+	// Try to parse request body for autonomous mode (ADR-007)
+	if err := c.ShouldBindJSON(&req); err == nil && req.ScanID != "" {
+		// Autonomous mode - start with custom config
+		cfg := scanner.AutonomousScanConfig{
+			ScanID:             req.ScanID,
+			Subnets:            req.Subnets,
+			PortRanges:         req.PortRanges,
+			RateLimitPPS:       req.RateLimitPPS,
+			TimeoutMS:          req.TimeoutMS,
+			MaxConcurrentHosts: req.MaxConcurrentHosts,
+			DeadHostThreshold:  req.DeadHostThreshold,
+			ProgressURL:        req.ProgressURL,
+			CompleteURL:        req.CompleteURL,
+			APIKey:             c.GetHeader("X-Internal-API-Key"),
+		}
+
+		if err := s.scanner.StartAutonomous(cfg); err != nil {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "started",
+			"message": "Autonomous network scan started",
+			"scan_id": req.ScanID,
+		})
+		return
+	}
+
+	// Legacy mode - start with configured defaults
 	if err := s.scanner.Start(); err != nil {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": err.Error(),
@@ -111,6 +145,12 @@ func (s *Server) startScanHandler(c *gin.Context) {
 
 // Stop scan handler
 func (s *Server) stopScanHandler(c *gin.Context) {
+	// Check for scan_id in request body (ADR-007)
+	var req StopScanRequest
+	if err := c.ShouldBindJSON(&req); err == nil && req.ScanID != "" {
+		s.logger.Infow("Stop scan requested", "scan_id", req.ScanID)
+	}
+
 	s.scanner.Stop()
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "stopped",

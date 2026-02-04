@@ -202,6 +202,11 @@ services:
       # Default admin password for initial setup (min 12 chars for security)
       # Set in .env for production, or leave unset to use locked placeholder
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-}
+      # Internal API key for collector scan callbacks
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      # RabbitMQ Management API credentials (for dashboard metrics)
+      RABBITMQ_USER: discovery
+      RABBITMQ_PASS: ${RABBITMQ_PASSWORD:-discovery}
     depends_on:
       rabbitmq:
         condition: service_healthy

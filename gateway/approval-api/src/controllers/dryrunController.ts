@@ -96,14 +96,25 @@ export async function startSessionHandler(
   req: Request,
   res: Response,
 ): Promise<void> {
+  logger.info("Start session request received", {
+    sessionId: req.params.id,
+    method: req.method,
+    path: req.path,
+  });
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    logger.warn("Start session validation failed", { errors: errors.array() });
     res.status(400).json({ errors: errors.array() });
     return;
   }
 
   try {
     const session = await getSessionById(req.params.id);
+    logger.info("Session retrieved", {
+      sessionId: req.params.id,
+      status: session?.status,
+    });
     if (!session) {
       res.status(404).json({ error: "Session not found" });
       return;

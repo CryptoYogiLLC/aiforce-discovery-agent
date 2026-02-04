@@ -14,10 +14,20 @@ logger = logging.getLogger(__name__)
 class EventPublisher:
     """Publishes CloudEvents to RabbitMQ."""
 
-    def __init__(self, channel: aio_pika.Channel, exchange_name: str):
+    def __init__(
+        self,
+        channel: aio_pika.Channel,
+        exchange_name: str,
+        scan_id: str | None = None,  # ADR-007: scan_id for CloudEvent subject
+    ):
         self.channel = channel
         self.exchange_name = exchange_name
         self._exchange: aio_pika.Exchange | None = None
+        self._scan_id = scan_id  # ADR-007: Used as CloudEvent subject
+
+    def set_scan_id(self, scan_id: str | None) -> None:
+        """Set the scan_id for CloudEvent subject (ADR-007)."""
+        self._scan_id = scan_id
 
     async def _get_exchange(self) -> aio_pika.Exchange:
         """Get or create the exchange."""
@@ -36,15 +46,21 @@ class EventPublisher:
         source: str = "code-analyzer",
     ) -> dict[str, Any]:
         """Create a CloudEvent envelope."""
-        return {
+        event = {
             "specversion": "1.0",
             "id": str(uuid4()),
-            "source": f"/discovery/{source}",
+            "source": f"/collectors/{source}",  # ADR-007: Standardized source
             "type": event_type,
             "time": datetime.now(timezone.utc).isoformat(),
             "datacontenttype": "application/json",
             "data": data,
         }
+
+        # ADR-007: Set subject = scan_id for orchestration tracking
+        if self._scan_id:
+            event["subject"] = self._scan_id
+
+        return event
 
     async def _publish(
         self,

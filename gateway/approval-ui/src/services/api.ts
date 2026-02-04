@@ -6,12 +6,27 @@ import type {
   DryrunSessionSummary,
   DryrunDiscovery,
   DryrunContainer,
-  ConfigProfile,
+  ConfigProfileFull,
+  CreateProfileInput,
+  UpdateProfileInput,
   User,
   UserListResult,
   UserRole,
   CreateUserInput,
   UpdateUserInput,
+  ScanRun,
+  ScanCollector,
+  ScanDiscovery,
+  InspectionRequest,
+  DashboardOverview,
+  ServiceHealth,
+  ServiceInfo,
+  RabbitMQMetrics,
+  EventMetrics,
+  TransmissionBatch,
+  TransmissionItem,
+  AuditLog,
+  AuditLogQueryParams,
 } from "../types";
 
 const API_BASE = "/api";
@@ -19,6 +34,7 @@ const API_BASE = "/api";
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
@@ -126,27 +142,54 @@ export const api = {
       return fetchJSON(`${API_BASE}/dryrun/sessions?${searchParams}`);
     },
 
-    getSession: (id: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}`);
+    getSession: async (id: string): Promise<DryrunSession> => {
+      const response = await fetchJSON<{ session: DryrunSession }>(
+        `${API_BASE}/dryrun/sessions/${id}`,
+      );
+      return response.session;
     },
 
-    createSession: (profileId: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions`, {
+    createSession: async (
+      profileId: string,
+      csrfToken?: string,
+    ): Promise<DryrunSession> => {
+      const response = await fetchJSON<{
+        session: DryrunSession;
+        message: string;
+      }>(`${API_BASE}/dryrun/sessions`, {
         method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
         body: JSON.stringify({ profile_id: profileId }),
       });
+      return response.session;
     },
 
-    startSession: (id: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}/start`, {
+    startSession: async (
+      id: string,
+      csrfToken?: string,
+    ): Promise<DryrunSession> => {
+      const response = await fetchJSON<{
+        session: DryrunSession;
+        message: string;
+      }>(`${API_BASE}/dryrun/sessions/${id}/start`, {
         method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
       });
+      return response.session;
     },
 
-    stopSession: (id: string): Promise<DryrunSession> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${id}/stop`, {
+    stopSession: async (
+      id: string,
+      csrfToken?: string,
+    ): Promise<DryrunSession> => {
+      const response = await fetchJSON<{
+        session: DryrunSession;
+        message: string;
+      }>(`${API_BASE}/dryrun/sessions/${id}/stop`, {
         method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
       });
+      return response.session;
     },
 
     // Discoveries
@@ -169,20 +212,29 @@ export const api = {
       );
     },
 
-    reviewDiscovery: (
+    reviewDiscovery: async (
       discoveryId: string,
       status: "approved" | "rejected",
       notes?: string,
+      csrfToken?: string,
     ): Promise<DryrunDiscovery> => {
-      return fetchJSON(`${API_BASE}/dryrun/discoveries/${discoveryId}/review`, {
-        method: "POST",
-        body: JSON.stringify({ status, notes }),
-      });
+      const response = await fetchJSON<{ discovery: DryrunDiscovery }>(
+        `${API_BASE}/dryrun/discoveries/${discoveryId}/review`,
+        {
+          method: "POST",
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+          body: JSON.stringify({ status, notes }),
+        },
+      );
+      return response.discovery;
     },
 
     // Containers
-    getContainers: (sessionId: string): Promise<DryrunContainer[]> => {
-      return fetchJSON(`${API_BASE}/dryrun/sessions/${sessionId}/containers`);
+    getContainers: async (sessionId: string): Promise<DryrunContainer[]> => {
+      const response = await fetchJSON<{ containers: DryrunContainer[] }>(
+        `${API_BASE}/dryrun/sessions/${sessionId}/containers`,
+      );
+      return response.containers;
     },
 
     // Export
@@ -192,15 +244,77 @@ export const api = {
   },
 
   profiles: {
-    list: async (): Promise<ConfigProfile[]> => {
-      const data = await fetchJSON<{ profiles: ConfigProfile[] }>(
-        `${API_BASE}/profiles`,
+    list: async (params?: {
+      profile_type?: string;
+    }): Promise<ConfigProfileFull[]> => {
+      const searchParams = new URLSearchParams();
+      if (params?.profile_type)
+        searchParams.set("profile_type", params.profile_type);
+      const data = await fetchJSON<{ profiles: ConfigProfileFull[] }>(
+        `${API_BASE}/profiles?${searchParams}`,
       );
       return data.profiles;
     },
 
-    get: (id: string): Promise<ConfigProfile> => {
+    get: (id: string): Promise<ConfigProfileFull> => {
       return fetchJSON(`${API_BASE}/profiles/${id}`);
+    },
+
+    create: (
+      data: CreateProfileInput,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify(data),
+      });
+    },
+
+    update: (
+      id: string,
+      data: UpdateProfileInput,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}`, {
+        method: "PATCH",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify(data),
+      });
+    },
+
+    clone: (
+      id: string,
+      name: string,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}/clone`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify({ name }),
+      });
+    },
+
+    delete: (id: string, csrfToken: string): Promise<{ message: string }> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}`, {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": csrfToken },
+      });
+    },
+
+    exportYaml: (id: string): Promise<{ yaml: string }> => {
+      return fetchJSON(`${API_BASE}/profiles/${id}/export`);
+    },
+
+    importYaml: (
+      yaml: string,
+      csrfToken: string,
+    ): Promise<ConfigProfileFull> => {
+      return fetchJSON(`${API_BASE}/profiles/import`, {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrfToken },
+        body: JSON.stringify({ yaml }),
+      });
     },
   },
 
@@ -273,6 +387,314 @@ export const api = {
         headers: { "X-CSRF-Token": csrfToken },
         body: JSON.stringify({ user_id: userId }),
       });
+    },
+  },
+
+  // Scan API (ADR-007)
+  scans: {
+    list: (params?: {
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }): Promise<{ scans: ScanRun[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.status) searchParams.set("status", params.status);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(`${API_BASE}/scans?${searchParams}`);
+    },
+
+    get: async (id: string): Promise<ScanRun> => {
+      const response = await fetchJSON<{ scan: ScanRun }>(
+        `${API_BASE}/scans/${id}`,
+      );
+      return response.scan;
+    },
+
+    create: async (profileId: string, csrfToken?: string): Promise<ScanRun> => {
+      const response = await fetchJSON<{ scan: ScanRun; message: string }>(
+        `${API_BASE}/scans`,
+        {
+          method: "POST",
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+          body: JSON.stringify({ profile_id: profileId }),
+        },
+      );
+      return response.scan;
+    },
+
+    start: async (id: string, csrfToken?: string): Promise<ScanRun> => {
+      const response = await fetchJSON<{ scan: ScanRun; message: string }>(
+        `${API_BASE}/scans/${id}/start`,
+        {
+          method: "POST",
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+        },
+      );
+      return response.scan;
+    },
+
+    stop: async (id: string, csrfToken?: string): Promise<ScanRun> => {
+      const response = await fetchJSON<{ scan: ScanRun; message: string }>(
+        `${API_BASE}/scans/${id}/stop`,
+        {
+          method: "POST",
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+        },
+      );
+      return response.scan;
+    },
+
+    getDiscoveries: (
+      scanId: string,
+      params?: {
+        candidate?: boolean;
+        status?: string;
+        limit?: number;
+        offset?: number;
+      },
+    ): Promise<{ discoveries: ScanDiscovery[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.candidate !== undefined)
+        searchParams.set("candidate", String(params.candidate));
+      if (params?.status) searchParams.set("status", params.status);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(
+        `${API_BASE}/scans/${scanId}/discoveries?${searchParams}`,
+      );
+    },
+
+    getCollectors: async (scanId: string): Promise<ScanCollector[]> => {
+      const response = await fetchJSON<{ collectors: ScanCollector[] }>(
+        `${API_BASE}/scans/${scanId}/collectors`,
+      );
+      return response.collectors;
+    },
+
+    triggerInspection: async (
+      scanId: string,
+      request: InspectionRequest,
+      csrfToken?: string,
+    ): Promise<{ message: string }> => {
+      return fetchJSON(`${API_BASE}/scans/${scanId}/inspect`, {
+        method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
+        body: JSON.stringify(request),
+      });
+    },
+
+    // SSE events endpoint URL (not a fetch, used for EventSource)
+    getEventsUrl: (scanId: string): string => {
+      return `${API_BASE}/scans/${scanId}/events`;
+    },
+  },
+
+  // Dashboard API
+  dashboard: {
+    getOverview: async (): Promise<DashboardOverview> => {
+      // Backend returns different shapes than frontend types expect.
+      // Transform here to bridge the gap.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = await fetchJSON<any>(`${API_BASE}/dashboard`);
+
+      // Transform services array → Record<string, ServiceInfo>
+      const services: Record<string, ServiceInfo> = {};
+      const rawServices = Array.isArray(raw.services) ? raw.services : [];
+      for (const svc of rawServices) {
+        const name = svc.health?.name || "unknown";
+        // Map backend status (running/stopped/unhealthy/unknown) to frontend
+        const statusMap: Record<string, string> = {
+          running: "healthy",
+          stopped: "unknown",
+          unhealthy: "unhealthy",
+          unknown: "unknown",
+        };
+        services[name] = {
+          health: {
+            name,
+            display_name: svc.health?.display_name || undefined,
+            status:
+              (statusMap[svc.health?.status] as ServiceHealth["status"]) ||
+              "unknown",
+            version: svc.health?.version || null,
+            uptime_seconds: svc.health?.uptime_seconds ?? null,
+            last_check:
+              svc.health?.last_check_at ||
+              svc.health?.last_check ||
+              new Date().toISOString(),
+            error_message: svc.health?.error_message || null,
+          },
+          metrics: svc.metrics
+            ? {
+                cpu_percent: svc.metrics.cpu_percent ?? null,
+                memory_mb: svc.metrics.memory_mb ?? null,
+                requests_per_minute: svc.metrics.requests_per_minute ?? null,
+                error_rate: svc.metrics.error_rate ?? null,
+              }
+            : null,
+        };
+      }
+
+      // Transform RabbitMQ metrics
+      const rawQueues = raw.rabbitmq?.queues || [];
+      const rabbitmq: RabbitMQMetrics = {
+        connected: (raw.rabbitmq?.connections ?? 0) > 0 || rawQueues.length > 0,
+        queues: rawQueues.map(
+          (q: {
+            name: string;
+            messages?: number;
+            consumers?: number;
+            message_rate?: number;
+            status?: string;
+          }) => ({
+            name: q.name,
+            messages: q.messages ?? 0,
+            consumers: q.consumers ?? 0,
+            message_rate: q.message_rate ?? 0,
+            state:
+              q.status === "healthy"
+                ? "running"
+                : q.status === "critical"
+                  ? "blocked"
+                  : "idle",
+          }),
+        ),
+        total_messages: rawQueues.reduce(
+          (
+            sum: number,
+            q: {
+              messages?: number;
+            },
+          ) => sum + (q.messages ?? 0),
+          0,
+        ),
+        total_consumers: rawQueues.reduce(
+          (sum: number, q: { consumers?: number }) => sum + (q.consumers ?? 0),
+          0,
+        ),
+      };
+
+      // Transform event metrics
+      const events: EventMetrics = {
+        events_per_second: raw.events?.events_per_second ?? 0,
+        error_rate: raw.events?.error_rate ?? 0,
+        events_today: raw.events?.events_today ?? 0,
+        events_last_hour: raw.events?.events_last_hour ?? 0,
+      };
+
+      return {
+        services,
+        rabbitmq,
+        events,
+        last_updated: raw.last_updated || new Date().toISOString(),
+      };
+    },
+
+    getServices: (): Promise<Record<string, ServiceInfo>> => {
+      return fetchJSON(`${API_BASE}/dashboard/services`);
+    },
+
+    getRabbitMQ: (): Promise<RabbitMQMetrics> => {
+      return fetchJSON(`${API_BASE}/dashboard/rabbitmq`);
+    },
+
+    getEvents: (): Promise<EventMetrics> => {
+      return fetchJSON(`${API_BASE}/dashboard/events`);
+    },
+  },
+
+  // Audit Trail API
+  auditTrail: {
+    listTransmissions: (params?: {
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }): Promise<{ batches: TransmissionBatch[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.status) searchParams.set("status", params.status);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(`${API_BASE}/audit-trail/transmissions?${searchParams}`);
+    },
+
+    getBatch: (id: string): Promise<TransmissionBatch> => {
+      return fetchJSON(`${API_BASE}/audit-trail/transmissions/${id}`);
+    },
+
+    getBatchItems: (
+      id: string,
+      params?: { limit?: number; offset?: number },
+    ): Promise<{ items: TransmissionItem[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(
+        `${API_BASE}/audit-trail/transmissions/${id}/items?${searchParams}`,
+      );
+    },
+
+    getItemPayload: (
+      id: string,
+      reason?: string,
+    ): Promise<{ payload: Record<string, unknown> }> => {
+      const searchParams = new URLSearchParams();
+      if (reason) searchParams.set("reason", reason);
+      return fetchJSON(
+        `${API_BASE}/audit-trail/items/${id}/payload?${searchParams}`,
+      );
+    },
+
+    verifyItem: (
+      id: string,
+    ): Promise<{ verified: boolean; hash_match: boolean }> => {
+      return fetchJSON(`${API_BASE}/audit-trail/items/${id}/verify`);
+    },
+
+    queryLogs: (
+      params?: AuditLogQueryParams,
+    ): Promise<{ logs: AuditLog[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.start_date) searchParams.set("start_date", params.start_date);
+      if (params?.end_date) searchParams.set("end_date", params.end_date);
+      if (params?.action) searchParams.set("action", params.action);
+      if (params?.actor) searchParams.set("actor", params.actor);
+      if (params?.resource_type)
+        searchParams.set("resource_type", params.resource_type);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      return fetchJSON(`${API_BASE}/audit-trail/logs?${searchParams}`);
+    },
+
+    export: async (params: {
+      start_date: string;
+      end_date: string;
+      format?: "json" | "csv";
+    }): Promise<Blob> => {
+      const searchParams = new URLSearchParams();
+      searchParams.set("start_date", params.start_date);
+      searchParams.set("end_date", params.end_date);
+      if (params.format) searchParams.set("format", params.format);
+
+      const response = await fetch(
+        `${API_BASE}/audit-trail/export?${searchParams}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed: HTTP ${response.status}`);
+      }
+
+      return response.blob();
+    },
+  },
+
+  // Log Streaming API
+  logs: {
+    getStreamUrl: (): string => {
+      return `${API_BASE}/logs/stream`;
     },
   },
 };

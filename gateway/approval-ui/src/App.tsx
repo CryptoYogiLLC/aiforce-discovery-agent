@@ -4,8 +4,13 @@ import DiscoveryList from "./pages/DiscoveryList";
 import DiscoveryDetail from "./pages/DiscoveryDetail";
 import DryRunPage from "./pages/DryRunPage";
 import DryRunSessionDetail from "./pages/DryRunSessionDetail";
+import ScanPage from "./pages/ScanPage";
 import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
+import DashboardPage from "./pages/DashboardPage";
+import ProfilesPage from "./pages/ProfilesPage";
+import AuditTrailPage from "./pages/AuditTrailPage";
+import LogsPage from "./pages/LogsPage";
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   const location = useLocation();
@@ -116,8 +121,15 @@ function AppContent() {
             </Link>
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
               <nav style={{ display: "flex", gap: "0.5rem" }}>
+                <NavLink to="/dashboard">Dashboard</NavLink>
                 <NavLink to="/">Discoveries</NavLink>
+                <NavLink to="/scan">Scan</NavLink>
                 <NavLink to="/dryrun">Dry-Run</NavLink>
+                <NavLink to="/profiles">Profiles</NavLink>
+                {hasPermission("audit:view") && (
+                  <NavLink to="/audit">Audit</NavLink>
+                )}
+                <NavLink to="/logs">Logs</NavLink>
                 {hasPermission("user:view") && (
                   <NavLink to="/users">Users</NavLink>
                 )}
@@ -138,8 +150,24 @@ function AppContent() {
       <main className="container">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/" element={<DiscoveryList />} />
           <Route path="/discovery/:id" element={<DiscoveryDetail />} />
+          <Route
+            path="/scan"
+            element={
+              <ProtectedRoute>
+                <ScanPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dryrun"
             element={
@@ -153,6 +181,30 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <DryRunSessionDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profiles"
+            element={
+              <ProtectedRoute>
+                <ProfilesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <ProtectedRoute>
+                <AuditTrailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/logs"
+            element={
+              <ProtectedRoute>
+                <LogsPage />
               </ProtectedRoute>
             }
           />

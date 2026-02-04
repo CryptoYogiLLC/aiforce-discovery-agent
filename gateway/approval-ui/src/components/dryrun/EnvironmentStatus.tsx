@@ -45,7 +45,7 @@ export default function EnvironmentStatus({
 
       <div
         style={{
-          maxHeight: "200px",
+          maxHeight: "300px",
           overflowY: "auto",
         }}
       >

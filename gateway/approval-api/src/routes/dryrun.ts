@@ -32,7 +32,12 @@ import {
   getCleanupStatusHandler,
   forceCleanupHandler,
 } from "../controllers/dryrunController";
-import { authenticate, validateCsrf, requireRole } from "../middleware/auth";
+import {
+  authenticate,
+  validateCsrf,
+  requireRole,
+  internalApiKeyAuthRequired,
+} from "../middleware/auth";
 
 const router = Router();
 
@@ -121,16 +126,15 @@ router.post(
 );
 
 /**
- * Internal endpoints (for orchestrator callbacks)
- * These require authentication with operator role for security
- * TODO: Consider adding API key or mTLS for service-to-service auth
+ * Internal endpoints (for orchestrator/collector callbacks)
+ * These use internal API key authentication for service-to-service communication
+ * INTERNAL_API_KEY must be configured - no dev bypass
  */
 
 // POST /api/dryrun/internal/discoveries - Add discovery
 router.post(
   "/internal/discoveries",
-  authenticate,
-  requireRole("operator"),
+  internalApiKeyAuthRequired,
   addDiscoveryValidation,
   addDiscoveryHandler,
 );
@@ -138,8 +142,7 @@ router.post(
 // POST /api/dryrun/internal/containers - Register container
 router.post(
   "/internal/containers",
-  authenticate,
-  requireRole("operator"),
+  internalApiKeyAuthRequired,
   registerContainerValidation,
   registerContainerHandler,
 );
@@ -147,8 +150,7 @@ router.post(
 // POST /api/dryrun/internal/sessions/:id/complete - Mark completed
 router.post(
   "/internal/sessions/:id/complete",
-  authenticate,
-  requireRole("operator"),
+  internalApiKeyAuthRequired,
   completeSessionValidation,
   completeSessionHandler,
 );

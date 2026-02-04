@@ -11,13 +11,16 @@ import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
 import profilesRoutes from "./routes/profiles";
 import dryrunRoutes from "./routes/dryrun";
+import scansRoutes from "./routes/scans";
 import dashboardRoutes from "./routes/dashboard";
 import auditTrailRoutes from "./routes/auditTrail";
+import logsRoutes from "./routes/logs";
 import { runMigrations } from "./db/migrate";
 import {
   startCleanupScheduler,
   stopCleanupScheduler,
 } from "./services/dryrunCleanup";
+import { detectStuckScans } from "./services/scanService";
 
 const app = express();
 
@@ -53,8 +56,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/profiles", profilesRoutes);
 app.use("/api/dryrun", dryrunRoutes);
+app.use("/api/scans", scansRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/audit-trail", auditTrailRoutes);
+app.use("/api/logs", logsRoutes);
 app.use("/api/discoveries", discoveryRoutes);
 app.use("/api/audit", auditRoutes);
 
@@ -96,6 +101,12 @@ async function start() {
     // Start dry-run cleanup scheduler
     startCleanupScheduler();
     logger.info("Dry-run cleanup scheduler started");
+
+    // Start stuck scan detector (runs every 60s)
+    const stuckScanInterval = setInterval(detectStuckScans, 60_000);
+    // Store for cleanup
+    (app as unknown as Record<string, unknown>)._stuckScanInterval =
+      stuckScanInterval;
   } catch (error) {
     logger.error("Failed to start server", { error });
     process.exit(1);
@@ -106,6 +117,9 @@ async function start() {
 async function gracefulShutdown(signal: string): Promise<void> {
   logger.info(`Received ${signal}, shutting down gracefully`);
   stopCleanupScheduler();
+  const stuckScanInterval = (app as unknown as Record<string, unknown>)
+    ._stuckScanInterval as ReturnType<typeof setInterval> | undefined;
+  if (stuckScanInterval) clearInterval(stuckScanInterval);
 
   try {
     await Promise.all([consumer.stop(), db.disconnect()]);

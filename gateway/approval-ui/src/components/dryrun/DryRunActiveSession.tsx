@@ -12,6 +12,7 @@ import EnvironmentStatus from "./EnvironmentStatus";
 import CollectorProgress from "./CollectorProgress";
 import LiveDiscoveryFeed from "./LiveDiscoveryFeed";
 import { api } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface DryRunActiveSessionProps {
   session: DryrunSession;
@@ -28,6 +29,7 @@ export default function DryRunActiveSession({
   onSessionUpdate,
   onComplete,
 }: DryRunActiveSessionProps) {
+  const { csrfToken } = useAuth();
   const [containers, setContainers] = useState<DryrunContainer[]>([]);
   const [discoveries, setDiscoveries] = useState<DryrunDiscovery[]>([]);
   const [collectors, setCollectors] = useState<CollectorStatus[]>([]);
@@ -54,22 +56,64 @@ export default function DryRunActiveSession({
   const elapsedMinutes = Math.floor(elapsed / 60);
   const elapsedSeconds = elapsed % 60;
 
-  // Load initial data
+  // Load initial data and poll for updates (since WebSocket isn't implemented)
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadData = async () => {
       try {
         const [containersData, discoveriesData] = await Promise.all([
           api.dryrun.getContainers(session.id),
-          api.dryrun.getDiscoveries(session.id, { limit: 100 }),
+          api.dryrun.getDiscoveries(session.id, { limit: 500 }),
         ]);
         setContainers(containersData);
         setDiscoveries(discoveriesData.discoveries);
+
+        // Derive collector status from discoveries
+        const discoveriesBySource = discoveriesData.discoveries.reduce(
+          (acc: Record<string, number>, d) => {
+            acc[d.source] = (acc[d.source] || 0) + 1;
+            return acc;
+          },
+          {},
+        );
+
+        // Update collector status based on discoveries
+        const updatedCollectors: CollectorStatus[] = [
+          {
+            name: "network-scanner",
+            status: discoveriesBySource["network-scanner"]
+              ? "completed"
+              : "pending",
+            progress: discoveriesBySource["network-scanner"] ? 100 : 0,
+            discovery_count: discoveriesBySource["network-scanner"] || 0,
+          },
+          {
+            name: "code-analyzer",
+            status: discoveriesBySource["code-analyzer"]
+              ? "completed"
+              : "pending",
+            progress: discoveriesBySource["code-analyzer"] ? 100 : 0,
+            discovery_count: discoveriesBySource["code-analyzer"] || 0,
+          },
+          {
+            name: "db-inspector",
+            status: discoveriesBySource["db-inspector"] ? "pending" : "pending",
+            progress: discoveriesBySource["db-inspector"] ? 100 : 0,
+            discovery_count: discoveriesBySource["db-inspector"] || 0,
+          },
+        ];
+        setCollectors(updatedCollectors);
       } catch (err) {
-        console.error("Failed to load initial data:", err);
+        console.error("Failed to load data:", err);
       }
     };
 
-    loadInitialData();
+    // Load immediately
+    loadData();
+
+    // Poll every 5 seconds for updates
+    const pollInterval = setInterval(loadData, 5000);
+
+    return () => clearInterval(pollInterval);
   }, [session.id]);
 
   // Timer for elapsed time
@@ -151,7 +195,7 @@ export default function DryRunActiveSession({
     try {
       setStopping(true);
       setError(null);
-      await api.dryrun.stopSession(session.id);
+      await api.dryrun.stopSession(session.id, csrfToken || undefined);
       onStop();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to stop session");
@@ -201,13 +245,14 @@ export default function DryRunActiveSession({
           </button>
         </div>
 
-        {error && (
+        {error && !error.includes("WebSocket") && (
           <div className="error" style={{ marginBottom: "1rem" }}>
             {error}
           </div>
         )}
 
-        {!isConnected && session.status === "running" && (
+        {/* WebSocket not implemented - hide connection warning */}
+        {false && !isConnected && session.status === "running" && (
           <div
             style={{
               backgroundColor: "#fef3c7",

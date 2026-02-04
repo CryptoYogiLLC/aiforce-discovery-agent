@@ -24,14 +24,15 @@ type ServerConfig struct {
 
 // ScannerConfig holds scanner-specific configuration.
 type ScannerConfig struct {
-	Subnets        []string `mapstructure:"subnets"`
-	ExcludeSubnets []string `mapstructure:"exclude_subnets"`
-	PortRanges     []string `mapstructure:"port_ranges"`
-	CommonPorts    []int    `mapstructure:"common_ports"`
-	RateLimit      int      `mapstructure:"rate_limit"`
-	Timeout        int      `mapstructure:"timeout"`
-	Concurrency    int      `mapstructure:"concurrency"`
-	EnableUDP      bool     `mapstructure:"enable_udp"`
+	Subnets            []string `mapstructure:"subnets"`
+	ExcludeSubnets     []string `mapstructure:"exclude_subnets"`
+	PortRanges         []string `mapstructure:"port_ranges"`
+	CommonPorts        []int    `mapstructure:"common_ports"`
+	RateLimit          int      `mapstructure:"rate_limit"`
+	Timeout            int      `mapstructure:"timeout"`
+	Concurrency        int      `mapstructure:"concurrency"`
+	EnableUDP          bool     `mapstructure:"enable_udp"`
+	DeadHostThreshold  int      `mapstructure:"dead_host_threshold"`
 }
 
 // RabbitMQConfig holds RabbitMQ connection configuration.
@@ -104,6 +105,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("scanner.timeout", 2000)
 	v.SetDefault("scanner.concurrency", 100)
 	v.SetDefault("scanner.enable_udp", false)
+	v.SetDefault("scanner.dead_host_threshold", 5)
 
 	// RabbitMQ defaults
 	v.SetDefault("rabbitmq.url", "amqp://discovery:discovery@localhost:5672/")

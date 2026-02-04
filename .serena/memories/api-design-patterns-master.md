@@ -130,6 +130,96 @@ class CreateItemRequest(BaseModel):
 
 ---
 
+## Pattern: Internal API Key Authentication (Added 2026-02-03)
+
+**Problem**: Service-to-service communication needs authentication without user context.
+**Context**: Collectors posting discoveries/progress to approval-api internal endpoints.
+
+**Solution**: Use shared `INTERNAL_API_KEY` via environment variable:
+
+```typescript
+// Middleware (gateway/approval-api/src/middleware/auth.ts)
+export function internalApiKeyAuth(req, res, next) {
+  const apiKey = req.headers["x-internal-api-key"];
+  const expectedKey = process.env.INTERNAL_API_KEY || "";
+
+  if (!expectedKey) {
+    // Dev mode: allow if not configured
+    logger.warn("INTERNAL_API_KEY not configured - allowing internal request");
+    next();
+    return;
+  }
+
+  // Use timing-safe comparison
+  if (!crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(expectedKey))) {
+    res.status(403).json({ error: "Invalid internal API key" });
+    return;
+  }
+  next();
+}
+```
+
+**Usage in routes:**
+
+```typescript
+// Internal endpoints use internalApiKeyAuth, not authenticate
+router.post("/internal/discoveries", internalApiKeyAuth, handler);
+router.post("/api/scans/:id/progress", internalApiKeyAuth, handler);
+```
+
+**Why**:
+
+- Collectors have no user session/cookies
+- Shared secret is simpler than per-service certificates
+- Dev mode allows requests without config for local testing
+- Timing-safe comparison prevents timing attacks
+
+**Source**: Session 2026-02-03 / Commit 76536cd
+
+---
+
+## Pattern: SSE for Real-Time Progress (Added 2026-02-03)
+
+**Problem**: Real-time progress updates for long-running operations.
+**Context**: Scan progress in approval-api.
+
+**Solution**: Use Server-Sent Events (SSE), not WebSockets:
+
+```typescript
+// SSE endpoint
+router.get("/scans/:id/events", authenticate, (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+  const unsubscribe = subscribeToScanEvents(scanId, (event) => {
+    res.write(`event: ${event.type}\n`);
+    res.write(`data: ${JSON.stringify(event.data)}\n\n`);
+  });
+
+  req.on("close", () => unsubscribe());
+});
+```
+
+**Why SSE over WebSockets**:
+
+- Server → client only (sufficient for progress)
+- Works with existing cookie auth
+- Simpler reconnection (browser handles it)
+- No bidirectional complexity
+
+**Nginx config for SSE:**
+
+```nginx
+proxy_buffering off;
+proxy_cache off;
+```
+
+**Source**: Session 2026-02-03 / ADR-007, Issue #112
+
+---
+
 ## Search Keywords
 
-api, rest, fastapi, pydantic, snake_case, request body, validation, 422
+api, rest, fastapi, pydantic, snake_case, request body, validation, 422, internal, api key, service-to-service, sse, server-sent-events

@@ -15,7 +15,12 @@ from fastapi.responses import JSONResponse
 
 from .config import settings
 from .consumer import EventConsumer
-from .modules import EnrichmentModule, PIIRedactorModule, ScoringModule
+from .modules import (
+    CandidateIdentificationModule,
+    EnrichmentModule,
+    PIIRedactorModule,
+    ScoringModule,
+)
 from .publisher import EventPublisher
 
 # Configure structured logging
@@ -38,6 +43,8 @@ structlog.configure(
 logger = structlog.get_logger()
 
 # Initialize processing modules
+# ADR-007: Candidate identification runs first to flag database candidates
+candidate_identification_module = CandidateIdentificationModule()
 enrichment_module = EnrichmentModule()
 pii_redactor_module = PIIRedactorModule(
     redact_emails=settings.pii_redact_emails,
@@ -55,10 +62,11 @@ publisher = EventPublisher()
 async def process_event(data: dict[str, Any]) -> None:
     """Process a discovered event through the pipeline.
 
-    Pipeline stages:
-    1. Enrichment - Add context and metadata
-    2. PII Redaction - Remove sensitive information
-    3. Scoring - Calculate complexity and effort scores
+    Pipeline stages (ADR-007):
+    1. Candidate Identification - Flag database candidates and validate confidence
+    2. Enrichment - Add context and metadata
+    3. PII Redaction - Remove sensitive information
+    4. Scoring - Calculate complexity and effort scores
 
     Args:
         data: The discovered event data
@@ -70,18 +78,23 @@ async def process_event(data: dict[str, Any]) -> None:
         "processing_started",
         event_id=event_metadata.get("id"),
         event_type=event_type,
+        scan_id=event_metadata.get("subject"),  # ADR-007: Log scan_id
     )
 
     try:
-        # Stage 1: Enrichment
+        # Stage 1: Candidate Identification (ADR-007)
+        if settings.candidate_identification_enabled:
+            data = await candidate_identification_module.process(data)
+
+        # Stage 2: Enrichment
         if settings.enrichment_enabled:
             data = await enrichment_module.process(data)
 
-        # Stage 2: PII Redaction
+        # Stage 3: PII Redaction
         if settings.pii_redaction_enabled:
             data = await pii_redactor_module.process(data)
 
-        # Stage 3: Scoring
+        # Stage 4: Scoring
         if settings.scoring_enabled:
             data = await scoring_module.process(data)
 
@@ -214,6 +227,7 @@ async def get_config() -> JSONResponse:
         content={
             "service_name": settings.service_name,
             "service_version": settings.service_version,
+            "candidate_identification_enabled": settings.candidate_identification_enabled,
             "enrichment_enabled": settings.enrichment_enabled,
             "pii_redaction_enabled": settings.pii_redaction_enabled,
             "scoring_enabled": settings.scoring_enabled,

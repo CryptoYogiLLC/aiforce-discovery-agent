@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import type { DryrunSession } from "../types";
 import DryRunStartPanel from "../components/dryrun/DryRunStartPanel";
 import DryRunActiveSession from "../components/dryrun/DryRunActiveSession";
@@ -8,6 +9,7 @@ import DryRunHistory from "../components/dryrun/DryRunHistory";
 
 export default function DryRunPage() {
   const navigate = useNavigate();
+  const { csrfToken } = useAuth();
   const [session, setSession] = useState<DryrunSession | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +53,20 @@ export default function DryRunPage() {
 
       // Create session
       // TODO: Pass seed to backend when seed parameter is implemented (Issue #70)
-      const newSession = await api.dryrun.createSession(profileId);
+      const newSession = await api.dryrun.createSession(
+        profileId,
+        csrfToken || undefined,
+      );
       setSession(newSession);
 
       // Start the session
-      const startedSession = await api.dryrun.startSession(newSession.id);
+      const startedSession = await api.dryrun.startSession(
+        newSession.id,
+        csrfToken || undefined,
+      );
       setSession(startedSession);
 
-      // Navigate to session URL
-      navigate(`/dryrun/${startedSession.id}`);
+      // Stay on this page - DryRunActiveSession component will show the live progress
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start dry-run");
     } finally {

@@ -10,7 +10,7 @@ export interface Discovery {
   status: "pending" | "approved" | "rejected";
   reviewed_by: string | null;
   reviewed_at: Date | null;
-  rejection_reason: string | null;
+  review_notes: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -123,9 +123,9 @@ class DiscoveryService {
 
     // Create audit entry
     await db.query(
-      `INSERT INTO gateway.audit_log (id, discovery_id, action, actor, created_at)
-       VALUES ($1, $2, 'approved', $3, NOW())`,
-      [uuidv4(), id, actor],
+      `INSERT INTO gateway.audit_log (id, event_type, actor_username, target_type, target_id, details, event_timestamp)
+       VALUES ($1, 'discovery_approved', $2, 'discovery', $3, '{}', NOW())`,
+      [uuidv4(), actor, id],
     );
 
     logger.info("Discovery approved", { id, actor });
@@ -149,16 +149,16 @@ class DiscoveryService {
     await db.query(
       `UPDATE gateway.discoveries
        SET status = 'rejected', reviewed_by = $2, reviewed_at = NOW(),
-           rejection_reason = $3, updated_at = NOW()
+           review_notes = $3, updated_at = NOW()
        WHERE id = $1`,
       [id, actor, reason],
     );
 
     // Create audit entry
     await db.query(
-      `INSERT INTO gateway.audit_log (id, discovery_id, action, actor, details, created_at)
-       VALUES ($1, $2, 'rejected', $3, $4, NOW())`,
-      [uuidv4(), id, actor, JSON.stringify({ reason })],
+      `INSERT INTO gateway.audit_log (id, event_type, actor_username, target_type, target_id, details, event_timestamp)
+       VALUES ($1, 'discovery_rejected', $2, 'discovery', $3, $4, NOW())`,
+      [uuidv4(), actor, id, JSON.stringify({ reason })],
     );
 
     logger.info("Discovery rejected", { id, actor, reason });
@@ -166,18 +166,56 @@ class DiscoveryService {
   }
 
   async batchApprove(ids: string[], actor: string): Promise<number> {
-    let approved = 0;
+    const client = await db.getClient();
+    try {
+      await client.query("BEGIN");
 
-    for (const id of ids) {
-      try {
-        const result = await this.approve(id, actor);
-        if (result) approved++;
-      } catch (error) {
-        logger.warn("Failed to approve discovery in batch", { id, error });
+      let approved = 0;
+      for (const id of ids) {
+        // Check discovery exists and is pending
+        const result = await client.query(
+          "SELECT id, status FROM gateway.discoveries WHERE id = $1",
+          [id],
+        );
+
+        if (result.rows.length === 0) {
+          throw new Error(`Discovery not found: ${id}`);
+        }
+
+        if (result.rows[0].status !== "pending") {
+          throw new Error(
+            `Cannot approve discovery ${id} with status: ${result.rows[0].status}`,
+          );
+        }
+
+        // Update discovery
+        await client.query(
+          `UPDATE gateway.discoveries
+           SET status = 'approved', reviewed_by = $2, reviewed_at = NOW(), updated_at = NOW()
+           WHERE id = $1`,
+          [id, actor],
+        );
+
+        // Create audit entry
+        await client.query(
+          `INSERT INTO gateway.audit_log (id, event_type, actor_username, target_type, target_id, details, event_timestamp)
+           VALUES ($1, 'discovery_approved', $2, 'discovery', $3, '{}', NOW())`,
+          [uuidv4(), actor, id],
+        );
+
+        approved++;
       }
-    }
 
-    return approved;
+      await client.query("COMMIT");
+      logger.info("Batch approval completed", { count: approved, actor });
+      return approved;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      logger.error("Batch approval failed, rolled back", { error, ids, actor });
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

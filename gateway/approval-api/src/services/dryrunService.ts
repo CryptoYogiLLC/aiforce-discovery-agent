@@ -105,6 +105,13 @@ export async function startSession(sessionId: string): Promise<DryrunSession> {
     const data = (await response.json()) as {
       container_count: number;
       network_name: string;
+      containers: Array<{
+        container_id: string;
+        name: string;
+        image: string;
+        repo: string;
+        status: string;
+      }>;
     };
 
     // Update session with container info
@@ -116,9 +123,22 @@ export async function startSession(sessionId: string): Promise<DryrunSession> {
       [data.container_count, data.network_name, sessionId],
     );
 
+    // Register each container in the database
+    for (const container of data.containers || []) {
+      await registerContainer(
+        sessionId,
+        container.container_id,
+        container.name,
+        container.repo, // service_type
+        container.image,
+        [], // port_mappings - not exposed in dry-run
+      );
+    }
+
     logger.info("Dry-run session started", {
       sessionId,
       containerCount: data.container_count,
+      containersRegistered: data.containers?.length || 0,
     });
 
     return rowToSession(result.rows[0] as Record<string, unknown>);
@@ -263,11 +283,26 @@ export async function stopSession(sessionId: string): Promise<DryrunSession> {
     throw new Error("Session not found");
   }
 
-  if (
-    !CLEANABLE_STATUSES.includes(session.status) &&
-    session.status !== "running"
-  ) {
+  // Allow stopping sessions in active states or cleanable states
+  const stoppableStatuses = [
+    "pending",
+    "generating",
+    "running",
+    ...CLEANABLE_STATUSES,
+  ];
+  if (!stoppableStatuses.includes(session.status)) {
     throw new Error(`Cannot stop session in status: ${session.status}`);
+  }
+
+  // For pending sessions, no containers exist yet - just mark as failed
+  if (session.status === "pending") {
+    await updateSessionStatus(
+      sessionId,
+      "failed",
+      "Session stopped before starting",
+    );
+    logger.info("Pending dry-run session stopped", { sessionId });
+    return (await getSessionById(sessionId))!;
   }
 
   // Update status to cleaning_up

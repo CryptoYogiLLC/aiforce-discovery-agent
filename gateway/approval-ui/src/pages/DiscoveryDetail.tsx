@@ -22,12 +22,16 @@ export default function DiscoveryDetail() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [disc, audit] = await Promise.all([
-          api.discoveries.get(id),
-          api.audit.getForDiscovery(id),
-        ]);
+        const disc = await api.discoveries.get(id);
         setDiscovery(disc);
-        setAuditLog(audit);
+
+        // Load audit log separately so it doesn't block discovery display
+        try {
+          const audit = await api.audit.getForDiscovery(id);
+          setAuditLog(audit);
+        } catch {
+          // Audit log may not be available yet
+        }
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load discovery",
@@ -142,11 +146,11 @@ export default function DiscoveryDetail() {
               </div>
             </>
           )}
-          {discovery.rejection_reason && (
+          {discovery.review_notes && (
             <div style={{ gridColumn: "1 / -1" }}>
-              <strong>Rejection Reason</strong>
+              <strong>Review Notes</strong>
               <p style={{ color: "var(--danger-color)" }}>
-                {discovery.rejection_reason}
+                {discovery.review_notes}
               </p>
             </div>
           )}

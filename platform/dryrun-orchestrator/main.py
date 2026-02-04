@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import docker
+import httpx
 import structlog
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -83,6 +84,14 @@ class Settings(BaseSettings):
     # When orchestrator runs in a container, it sees /repos but needs host path for mounts
     sample_repos_host_path: str = ""  # If empty, uses sample_repos_path
     docker_network: str = "discovery-network"
+
+    # Collector URLs for triggering scans
+    code_analyzer_url: str = "http://code-analyzer:8002"
+    network_scanner_url: str = "http://network-scanner:8001"
+    db_inspector_url: str = "http://db-inspector:8003"
+
+    # Approval API URL for posting discoveries
+    approval_api_url: str = "http://approval-api:3001"
 
     class Config:
         env_prefix = "DRYRUN_"
@@ -212,6 +221,51 @@ class ContainerStatus(BaseModel):
 active_sessions: dict[str, list[str]] = {}
 
 
+async def trigger_code_analyzer(session_id: str) -> dict:
+    """
+    Trigger the code-analyzer to scan local repositories.
+
+    This calls the code-analyzer's /api/v1/dryrun/scan endpoint to analyze
+    all sample repositories mounted at /repos. Discoveries are posted back
+    to the approval-api's internal endpoint.
+    """
+    url = f"{settings.code_analyzer_url}/api/v1/dryrun/scan"
+    logger.info("Triggering code-analyzer", session_id=session_id, url=url)
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                url,
+                json={
+                    "session_id": session_id,
+                    "callback_url": settings.approval_api_url,
+                },
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(
+                "Code analysis completed",
+                session_id=session_id,
+                repos_scanned=result.get("repos_scanned", 0),
+            )
+            return result
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "Code analyzer returned error",
+            session_id=session_id,
+            status_code=e.response.status_code,
+            detail=e.response.text,
+        )
+        raise
+    except httpx.RequestError as e:
+        logger.error(
+            "Failed to reach code analyzer",
+            session_id=session_id,
+            error=str(e),
+        )
+        raise
+
+
 @app.on_event("startup")
 async def startup():
     """Initialize Docker client on startup."""
@@ -330,15 +384,14 @@ async def start_dryrun_session(request: StartSessionRequest, _api_key: ApiKeyDep
         )
 
     try:
-        # Get or create the network
-        network_name = f"dryrun-{session_id[:8]}"
+        # Use the configured network (discovery-network) so collectors can reach containers
+        network_name = settings.docker_network
         try:
             docker_client.networks.get(network_name)
         except docker.errors.NotFound:
-            docker_client.networks.create(
-                network_name,
-                driver="bridge",
-                labels={"dryrun.session_id": session_id},
+            raise HTTPException(
+                status_code=500,
+                detail=f"Network {network_name} not found. Ensure discovery-network exists.",
             )
 
         # Get sample repos
@@ -415,6 +468,24 @@ async def start_dryrun_session(request: StartSessionRequest, _api_key: ApiKeyDep
         # Track session containers
         active_sessions[session_id] = container_ids
 
+        # Trigger collectors to scan the test environment
+        # This is done asynchronously - the response returns immediately
+        # and collectors will publish discoveries via RabbitMQ
+        try:
+            analysis_result = await trigger_code_analyzer(session_id)
+            logger.info(
+                "Collectors triggered successfully",
+                session_id=session_id,
+                repos_scanned=analysis_result.get("repos_scanned", 0),
+            )
+        except Exception as e:
+            # Log but don't fail the session - containers are running
+            logger.warning(
+                "Failed to trigger code analyzer, session continues",
+                session_id=session_id,
+                error=str(e),
+            )
+
         return StartSessionResponse(
             container_count=len(containers),
             network_name=network_name,
@@ -462,19 +533,7 @@ async def cleanup_dryrun_session(request: CleanupRequest, _api_key: ApiKeyDep):
                 logger.error(error_msg)
                 errors_encountered.append(error_msg)
 
-        # Remove the network only if all containers were cleaned successfully
-        if not errors_encountered:
-            network_name = f"dryrun-{session_id[:8]}"
-            try:
-                network = docker_client.networks.get(network_name)
-                network.remove()
-                logger.info("Network removed", network_name=network_name)
-            except docker.errors.NotFound:
-                pass  # Network already removed
-            except docker.errors.APIError as e:
-                error_msg = f"Failed to remove network {network_name}: {e}"
-                logger.warning(error_msg)
-                errors_encountered.append(error_msg)
+        # Note: We don't remove the network since we use the shared discovery-network
 
         # Clear from tracking
         active_sessions.pop(session_id, None)

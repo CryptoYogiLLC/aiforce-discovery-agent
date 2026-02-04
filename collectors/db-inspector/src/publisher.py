@@ -21,6 +21,11 @@ class EventPublisher:
         self.connection: aio_pika.RobustConnection | None = None
         self.channel: aio_pika.Channel | None = None
         self.exchange: aio_pika.Exchange | None = None
+        self._scan_id: str | None = None  # ADR-007: scan_id for CloudEvent subject
+
+    def set_scan_id(self, scan_id: str | None) -> None:
+        """Set the scan_id for CloudEvent subject (ADR-007)."""
+        self._scan_id = scan_id
 
     @property
     def is_connected(self) -> bool:
@@ -56,7 +61,7 @@ class EventPublisher:
         self, event_type: str, data: dict[str, Any]
     ) -> dict[str, Any]:
         """Create a CloudEvents 1.0 compliant event."""
-        return {
+        event = {
             "specversion": "1.0",
             "type": event_type,
             "source": "/collectors/db-inspector",
@@ -65,6 +70,12 @@ class EventPublisher:
             "datacontenttype": "application/json",
             "data": data,
         }
+
+        # ADR-007: Set subject = scan_id for orchestration tracking
+        if self._scan_id:
+            event["subject"] = self._scan_id
+
+        return event
 
     async def _publish(
         self, event_type: str, routing_key: str, data: dict[str, Any]

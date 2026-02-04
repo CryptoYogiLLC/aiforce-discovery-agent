@@ -96,7 +96,7 @@ class Database {
       `CREATE INDEX IF NOT EXISTS idx_discoveries_status ON gateway.discoveries(status);`,
       `CREATE INDEX IF NOT EXISTS idx_discoveries_created_at ON gateway.discoveries(created_at DESC);`,
       `CREATE INDEX IF NOT EXISTS idx_discoveries_source ON gateway.discoveries(source_service);`,
-      `CREATE INDEX IF NOT EXISTS idx_audit_discovery ON gateway.audit_log(discovery_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_audit_discovery ON gateway.audit_log(target_type, target_id);`,
     ];
 
     const client = await pool.connect();
