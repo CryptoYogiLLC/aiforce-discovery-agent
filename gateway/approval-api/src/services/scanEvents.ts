@@ -43,11 +43,16 @@ export type ScanEventType =
   | "status"
   | "collector"
   | "complete"
-  | "error";
+  | "error"
+  | "scan";
 
 export interface ScanEvent {
   type: ScanEventType;
-  data: ScanProgressEvent | ScanStatusEvent | CollectorStatusEvent;
+  data:
+    | ScanProgressEvent
+    | ScanStatusEvent
+    | CollectorStatusEvent
+    | Record<string, unknown>;
 }
 
 /**
@@ -106,6 +111,15 @@ class ScanEventEmitter extends EventEmitter {
     };
     this.emit(`scan:${scanId}`, event);
     logger.info("Scan complete emitted", { scanId, status });
+  }
+
+  /**
+   * Emit scan data update (phases, totals, etc.)
+   */
+  emitScanData(scanId: string, data: Record<string, unknown>): void {
+    const event: ScanEvent = { type: "scan", data };
+    this.emit(`scan:${scanId}`, event);
+    logger.debug("Scan data emitted", { scanId });
   }
 
   /**

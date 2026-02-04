@@ -40,6 +40,13 @@ const COLLECTOR_URLS = {
   "db-inspector": process.env.DB_INSPECTOR_URL || "http://db-inspector:8003",
 };
 
+// Map collector names to ADR-007 phases
+const COLLECTOR_PHASE_MAP: Record<string, string> = {
+  "network-scanner": "enumeration",
+  "code-analyzer": "enumeration",
+  "db-inspector": "inspection",
+};
+
 // Approval API base URL for callbacks
 const APPROVAL_API_URL =
   process.env.APPROVAL_API_URL || "http://approval-api:3001";
@@ -599,6 +606,15 @@ export async function handleCollectorProgress(
   // Update scan total discoveries
   await updateScanDiscoveryCount(callback.scan_id);
 
+  // Update phase discovery count and emit to frontend
+  const updatedPhases = await updatePhaseDiscoveryCount(
+    callback.scan_id,
+    callback.collector,
+  );
+  if (updatedPhases) {
+    scanEvents.emitScanData(callback.scan_id, { phases: updatedPhases });
+  }
+
   // Emit progress event
   scanEvents.emitProgress(callback.scan_id, {
     scan_id: callback.scan_id,
@@ -655,6 +671,9 @@ export async function handleCollectorComplete(
   // Update scan totals
   await updateScanDiscoveryCount(callback.scan_id);
 
+  // Update phase discovery count
+  await updatePhaseDiscoveryCount(callback.scan_id, callback.collector);
+
   // Emit collector completion
   scanEvents.emitCollectorStatus(callback.scan_id, {
     scan_id: callback.scan_id,
@@ -690,6 +709,55 @@ async function updateScanDiscoveryCount(scanId: string): Promise<void> {
      WHERE id = $1`,
     [scanId],
   );
+}
+
+/**
+ * Update phase discovery count by summing all collectors in that phase.
+ * Uses SUM (not increment) for race-safety.
+ * Returns the updated phases JSONB or null if collector has no phase mapping.
+ */
+async function updatePhaseDiscoveryCount(
+  scanId: string,
+  collectorName: string,
+): Promise<Record<string, unknown> | null> {
+  const phase = COLLECTOR_PHASE_MAP[collectorName];
+  if (!phase) {
+    return null;
+  }
+
+  // Get all collector names that belong to this phase
+  const phaseCollectors = Object.entries(COLLECTOR_PHASE_MAP)
+    .filter(([, p]) => p === phase)
+    .map(([name]) => name);
+
+  // SUM discovery_count from all collectors in this phase
+  const sumResult = await pool.query(
+    `SELECT COALESCE(SUM(discovery_count), 0) AS total
+     FROM gateway.scan_collectors
+     WHERE scan_id = $1 AND collector_name = ANY($2)`,
+    [scanId, phaseCollectors],
+  );
+  const phaseTotal = parseInt(
+    (sumResult.rows[0] as Record<string, unknown>).total as string,
+  );
+
+  // Atomically update phases JSONB
+  const updateResult = await pool.query(
+    `UPDATE gateway.scan_runs
+     SET phases = jsonb_set(phases, $1, $2::jsonb)
+     WHERE id = $3
+     RETURNING phases`,
+    [`{${phase},discovery_count}`, JSON.stringify(phaseTotal), scanId],
+  );
+
+  if (updateResult.rows.length === 0) {
+    return null;
+  }
+
+  return (updateResult.rows[0] as Record<string, unknown>).phases as Record<
+    string,
+    unknown
+  >;
 }
 
 /**
