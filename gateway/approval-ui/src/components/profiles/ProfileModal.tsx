@@ -31,6 +31,7 @@ const DEFAULT_CONFIG: ProfileConfig = {
   disk_space_limit_mb: 1024,
   memory_limit_mb: 512,
   enabled_collectors: ["network-scanner"],
+  advanced_settings: {},
 };
 
 export default function ProfileModal({
@@ -526,6 +527,105 @@ export default function ProfileModal({
                   }
                 }}
                 min={128}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "6px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Advanced Settings */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "1rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  fontWeight: 500,
+                  fontSize: "0.875rem",
+                }}
+              >
+                Concurrent Hosts
+              </label>
+              <input
+                type="number"
+                value={
+                  (formData.config.advanced_settings
+                    ?.max_concurrent_hosts as number) || ""
+                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value) && value > 0) {
+                    updateConfig({
+                      advanced_settings: {
+                        ...formData.config.advanced_settings,
+                        max_concurrent_hosts: value,
+                      },
+                    });
+                  } else if (e.target.value === "") {
+                    const rest = { ...formData.config.advanced_settings };
+                    delete rest.max_concurrent_hosts;
+                    updateConfig({ advanced_settings: rest });
+                  }
+                }}
+                placeholder="Default"
+                min={1}
+                max={500}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "6px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "0.5rem",
+                  fontWeight: 500,
+                  fontSize: "0.875rem",
+                }}
+              >
+                Dead Host Threshold
+              </label>
+              <input
+                type="number"
+                value={
+                  (formData.config.advanced_settings
+                    ?.dead_host_threshold as number) || ""
+                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value) && value > 0) {
+                    updateConfig({
+                      advanced_settings: {
+                        ...formData.config.advanced_settings,
+                        dead_host_threshold: value,
+                      },
+                    });
+                  } else if (e.target.value === "") {
+                    const rest = { ...formData.config.advanced_settings };
+                    delete rest.dead_host_threshold;
+                    updateConfig({ advanced_settings: rest });
+                  }
+                }}
+                placeholder="Default"
+                min={1}
+                max={50}
                 style={{
                   width: "100%",
                   padding: "0.5rem",

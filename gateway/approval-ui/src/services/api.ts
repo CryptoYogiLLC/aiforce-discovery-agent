@@ -31,6 +31,89 @@ import type {
 
 const API_BASE = "/api";
 
+/**
+ * Backend returns flat profile objects; frontend expects nested config object.
+ * This transforms the flat backend shape into ConfigProfileFull.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapBackendProfile(raw: any): ConfigProfileFull {
+  return {
+    id: raw.id,
+    name: raw.name,
+    description: raw.description || null,
+    profile_type: raw.profile_type || "custom",
+    is_default: raw.is_default || false,
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+    config: {
+      target_subnets: raw.target_subnets || [],
+      port_ranges: raw.port_ranges || { tcp: "", udp: "" },
+      scan_rate_limit: raw.scan_rate_limit ?? 0,
+      max_services: raw.max_services ?? 0,
+      max_hosts: raw.max_hosts ?? 0,
+      timeout_seconds: raw.timeout_seconds ?? 0,
+      disk_space_limit_mb: raw.disk_space_limit_mb ?? 0,
+      memory_limit_mb: raw.memory_limit_mb ?? 0,
+      enabled_collectors: raw.enabled_collectors || [],
+      advanced_settings: raw.advanced_settings || undefined,
+    },
+  };
+}
+
+/**
+ * Flatten nested CreateProfileInput for the backend API.
+ */
+function flattenCreateInput(data: CreateProfileInput): Record<string, unknown> {
+  return {
+    name: data.name,
+    description: data.description,
+    ...(data.config && {
+      target_subnets: data.config.target_subnets,
+      port_ranges: data.config.port_ranges,
+      scan_rate_limit: data.config.scan_rate_limit,
+      max_services: data.config.max_services,
+      max_hosts: data.config.max_hosts,
+      timeout_seconds: data.config.timeout_seconds,
+      disk_space_limit_mb: data.config.disk_space_limit_mb,
+      memory_limit_mb: data.config.memory_limit_mb,
+      enabled_collectors: data.config.enabled_collectors,
+      advanced_settings: data.config.advanced_settings,
+    }),
+  };
+}
+
+/**
+ * Flatten nested UpdateProfileInput for the backend API.
+ */
+function flattenUpdateInput(data: UpdateProfileInput): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  if (data.name !== undefined) result.name = data.name;
+  if (data.description !== undefined) result.description = data.description;
+  if (data.config) {
+    if (data.config.target_subnets !== undefined)
+      result.target_subnets = data.config.target_subnets;
+    if (data.config.port_ranges !== undefined)
+      result.port_ranges = data.config.port_ranges;
+    if (data.config.scan_rate_limit !== undefined)
+      result.scan_rate_limit = data.config.scan_rate_limit;
+    if (data.config.max_services !== undefined)
+      result.max_services = data.config.max_services;
+    if (data.config.max_hosts !== undefined)
+      result.max_hosts = data.config.max_hosts;
+    if (data.config.timeout_seconds !== undefined)
+      result.timeout_seconds = data.config.timeout_seconds;
+    if (data.config.disk_space_limit_mb !== undefined)
+      result.disk_space_limit_mb = data.config.disk_space_limit_mb;
+    if (data.config.memory_limit_mb !== undefined)
+      result.memory_limit_mb = data.config.memory_limit_mb;
+    if (data.config.enabled_collectors !== undefined)
+      result.enabled_collectors = data.config.enabled_collectors;
+    if (data.config.advanced_settings !== undefined)
+      result.advanced_settings = data.config.advanced_settings;
+  }
+  return result;
+}
+
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...options,
@@ -250,49 +333,69 @@ export const api = {
       const searchParams = new URLSearchParams();
       if (params?.profile_type)
         searchParams.set("profile_type", params.profile_type);
-      const data = await fetchJSON<{ profiles: ConfigProfileFull[] }>(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await fetchJSON<{ profiles: any[] }>(
         `${API_BASE}/profiles?${searchParams}`,
       );
-      return data.profiles;
+      return data.profiles.map(mapBackendProfile);
     },
 
-    get: (id: string): Promise<ConfigProfileFull> => {
-      return fetchJSON(`${API_BASE}/profiles/${id}`);
+    get: async (id: string): Promise<ConfigProfileFull> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await fetchJSON<{ profile: any }>(
+        `${API_BASE}/profiles/${id}`,
+      );
+      return mapBackendProfile(data.profile);
     },
 
-    create: (
+    create: async (
       data: CreateProfileInput,
       csrfToken: string,
     ): Promise<ConfigProfileFull> => {
-      return fetchJSON(`${API_BASE}/profiles`, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-        body: JSON.stringify(data),
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await fetchJSON<{ profile: any; message: string }>(
+        `${API_BASE}/profiles`,
+        {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken },
+          body: JSON.stringify(flattenCreateInput(data)),
+        },
+      );
+      return mapBackendProfile(response.profile);
     },
 
-    update: (
+    update: async (
       id: string,
       data: UpdateProfileInput,
       csrfToken: string,
     ): Promise<ConfigProfileFull> => {
-      return fetchJSON(`${API_BASE}/profiles/${id}`, {
-        method: "PATCH",
-        headers: { "X-CSRF-Token": csrfToken },
-        body: JSON.stringify(data),
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await fetchJSON<{ profile: any; message: string }>(
+        `${API_BASE}/profiles/${id}`,
+        {
+          method: "PATCH",
+          headers: { "X-CSRF-Token": csrfToken },
+          body: JSON.stringify(flattenUpdateInput(data)),
+        },
+      );
+      return mapBackendProfile(response.profile);
     },
 
-    clone: (
+    clone: async (
       id: string,
       name: string,
       csrfToken: string,
     ): Promise<ConfigProfileFull> => {
-      return fetchJSON(`${API_BASE}/profiles/${id}/clone`, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-        body: JSON.stringify({ name }),
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await fetchJSON<{ profile: any; message: string }>(
+        `${API_BASE}/profiles/${id}/clone`,
+        {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken },
+          body: JSON.stringify({ name }),
+        },
+      );
+      return mapBackendProfile(response.profile);
     },
 
     delete: (id: string, csrfToken: string): Promise<{ message: string }> => {
@@ -306,15 +409,20 @@ export const api = {
       return fetchJSON(`${API_BASE}/profiles/${id}/export`);
     },
 
-    importYaml: (
+    importYaml: async (
       yaml: string,
       csrfToken: string,
     ): Promise<ConfigProfileFull> => {
-      return fetchJSON(`${API_BASE}/profiles/import`, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-        body: JSON.stringify({ yaml }),
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await fetchJSON<{ profile: any; message: string }>(
+        `${API_BASE}/profiles/import`,
+        {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken },
+          body: JSON.stringify({ yaml }),
+        },
+      );
+      return mapBackendProfile(response.profile);
     },
   },
 

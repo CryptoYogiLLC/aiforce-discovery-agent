@@ -321,6 +321,7 @@ export interface ProfileConfig {
   disk_space_limit_mb: number;
   memory_limit_mb: number;
   enabled_collectors: string[];
+  advanced_settings?: Record<string, unknown>;
 }
 
 export interface ConfigProfileFull {
