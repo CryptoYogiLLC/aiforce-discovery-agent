@@ -407,8 +407,15 @@ async def batch_inspect_databases(
             f"{failed_count} failed, {reporter.discovery_count} discoveries"
         )
 
+        if failed_count == total_targets:
+            status = "failed"
+        elif failed_count > 0:
+            status = "partial"
+        else:
+            status = "completed"
+
         return BatchInspectionResponse(
-            status="completed" if failed_count < total_targets else "partial",
+            status=status,
             message=f"Inspected {inspected_count}/{total_targets} targets, "
             f"{reporter.discovery_count} discoveries",
             scan_id=request.scan_id,

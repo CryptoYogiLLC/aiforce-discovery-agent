@@ -356,11 +356,12 @@ export default function ProfileModal({
               <input
                 type="number"
                 value={formData.config.scan_rate_limit}
-                onChange={(e) =>
-                  updateConfig({
-                    scan_rate_limit: parseInt(e.target.value, 10),
-                  })
-                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value)) {
+                    updateConfig({ scan_rate_limit: value });
+                  }
+                }}
                 min={1}
                 max={100000}
                 style={{
@@ -386,9 +387,12 @@ export default function ProfileModal({
               <input
                 type="number"
                 value={formData.config.max_services}
-                onChange={(e) =>
-                  updateConfig({ max_services: parseInt(e.target.value, 10) })
-                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value)) {
+                    updateConfig({ max_services: value });
+                  }
+                }}
                 min={1}
                 style={{
                   width: "100%",
@@ -413,9 +417,12 @@ export default function ProfileModal({
               <input
                 type="number"
                 value={formData.config.max_hosts}
-                onChange={(e) =>
-                  updateConfig({ max_hosts: parseInt(e.target.value, 10) })
-                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value)) {
+                    updateConfig({ max_hosts: value });
+                  }
+                }}
                 min={1}
                 style={{
                   width: "100%",
@@ -451,11 +458,12 @@ export default function ProfileModal({
               <input
                 type="number"
                 value={formData.config.timeout_seconds}
-                onChange={(e) =>
-                  updateConfig({
-                    timeout_seconds: parseInt(e.target.value, 10),
-                  })
-                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value)) {
+                    updateConfig({ timeout_seconds: value });
+                  }
+                }}
                 min={1}
                 max={300}
                 style={{
@@ -481,11 +489,12 @@ export default function ProfileModal({
               <input
                 type="number"
                 value={formData.config.disk_space_limit_mb}
-                onChange={(e) =>
-                  updateConfig({
-                    disk_space_limit_mb: parseInt(e.target.value, 10),
-                  })
-                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value)) {
+                    updateConfig({ disk_space_limit_mb: value });
+                  }
+                }}
                 min={100}
                 style={{
                   width: "100%",
@@ -510,11 +519,12 @@ export default function ProfileModal({
               <input
                 type="number"
                 value={formData.config.memory_limit_mb}
-                onChange={(e) =>
-                  updateConfig({
-                    memory_limit_mb: parseInt(e.target.value, 10),
-                  })
-                }
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isFinite(value)) {
+                    updateConfig({ memory_limit_mb: value });
+                  }
+                }}
                 min={128}
                 style={{
                   width: "100%",

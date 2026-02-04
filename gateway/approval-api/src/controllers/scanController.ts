@@ -547,9 +547,14 @@ export async function progressCallbackHandler(
 
     const accepted = await handleCollectorProgress(callback);
 
-    res.status(accepted ? 200 : 204).json({
-      accepted,
-      message: accepted ? "Progress updated" : "Sequence already processed",
+    if (!accepted) {
+      res.status(204).end();
+      return;
+    }
+
+    res.status(200).json({
+      accepted: true,
+      message: "Progress updated",
     });
   } catch (err) {
     logger.error("Failed to process progress callback", {

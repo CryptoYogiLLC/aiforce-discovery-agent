@@ -9,8 +9,8 @@ type StartScanRequest struct {
 	PortRanges         []string `json:"port_ranges"`
 	RateLimitPPS       int      `json:"rate_limit_pps"`
 	TimeoutMS          int      `json:"timeout_ms"`
-	MaxConcurrentHosts int      `json:"max_concurrent_hosts"`
-	DeadHostThreshold  int      `json:"dead_host_threshold"`
+	MaxConcurrentHosts int      `json:"max_concurrent_hosts" binding:"omitempty,gte=1"`
+	DeadHostThreshold  int      `json:"dead_host_threshold" binding:"omitempty,gte=1"`
 	ProgressURL        string   `json:"progress_url" binding:"required,url"`
 	CompleteURL        string   `json:"complete_url" binding:"required,url"`
 }

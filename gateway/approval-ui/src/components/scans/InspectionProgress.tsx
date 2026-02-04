@@ -328,7 +328,7 @@ export default function InspectionProgress({
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
-          {Object.entries(scan.phases).map(([phaseName, phase]) => (
+          {Object.entries(scan.phases ?? {}).map(([phaseName, phase]) => (
             <div key={phaseName}>
               <div
                 style={{

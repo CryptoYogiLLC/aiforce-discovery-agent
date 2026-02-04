@@ -122,14 +122,14 @@ export async function startScan(scanId: string): Promise<ScanRun> {
       scanId,
       collectorName,
       scan.config_snapshot as unknown as Record<string, unknown>,
-    ).catch((err) => {
+    ).catch(async (err) => {
       logger.error("Failed to trigger collector", {
         scanId,
         collector: collectorName,
         error: (err as Error).message,
       });
       // Update collector status to failed
-      updateCollectorStatus(
+      await updateCollectorStatus(
         scanId,
         collectorName,
         "failed",
@@ -575,7 +575,7 @@ export async function handleCollectorProgress(
   const result = await pool.query(
     `UPDATE gateway.scan_collectors
      SET progress = $1, discovery_count = $2, last_heartbeat_at = NOW(), last_sequence = $3
-     WHERE scan_id = $4 AND collector_name = $5 AND last_sequence < $3
+     WHERE scan_id = $4 AND collector_name = $5 AND COALESCE(last_sequence, -1) < $3
      RETURNING id`,
     [
       callback.progress,
