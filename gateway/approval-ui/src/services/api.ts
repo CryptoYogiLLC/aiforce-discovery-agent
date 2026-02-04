@@ -125,10 +125,17 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const error = await response
+    const body = await response
       .json()
       .catch(() => ({ error: "Unknown error" }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    // Backend uses both { error: "..." } and { errors: [{ message }] } formats
+    const message =
+      body.error ||
+      (Array.isArray(body.errors)
+        ? body.errors.map((e: { message?: string }) => e.message).join("; ")
+        : null) ||
+      `HTTP ${response.status}`;
+    throw new Error(message);
   }
 
   return response.json();

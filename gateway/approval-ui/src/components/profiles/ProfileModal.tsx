@@ -705,20 +705,28 @@ export default function ProfileModal({
               type="submit"
               disabled={
                 isSubmitting ||
+                isPreset ||
                 !formData.name ||
                 formData.config.target_subnets.length === 0
               }
               className="btn btn-primary"
               style={{
                 padding: "0.75rem 1.5rem",
-                opacity: isSubmitting ? 0.7 : 1,
+                opacity: isSubmitting || isPreset ? 0.7 : 1,
               }}
+              title={
+                isPreset
+                  ? "Preset profiles cannot be modified. Clone to customize."
+                  : undefined
+              }
             >
               {isSubmitting
                 ? "Saving..."
-                : isEdit
-                  ? "Save Changes"
-                  : "Create Profile"}
+                : isPreset
+                  ? "Clone to Customize"
+                  : isEdit
+                    ? "Save Changes"
+                    : "Create Profile"}
             </button>
           </div>
         </form>
