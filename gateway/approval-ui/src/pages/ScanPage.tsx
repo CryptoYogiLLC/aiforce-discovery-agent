@@ -50,7 +50,7 @@ const collectorIcons: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  pending: "var(--text-secondary)",
+  pending: "var(--background)",
   running: "var(--primary-color)",
   completed: "var(--success-color)",
   failed: "var(--danger-color)",
@@ -830,49 +830,63 @@ export default function ScanPage() {
                         gap: "0.5rem",
                       }}
                     >
-                      {detailDiscoveries.map((discovery) => (
-                        <div
-                          key={discovery.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "0.5rem 0",
-                            borderBottom: "1px solid var(--border-color)",
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 500 }}>
-                              {discovery.event_type}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "0.75rem",
-                                color: "var(--text-secondary)",
-                              }}
-                            >
-                              {discovery.source_service}
-                            </div>
-                          </div>
-                          <span
-                            className="badge"
+                      {detailDiscoveries.map((discovery) => {
+                        const p = discovery.payload || {};
+                        const title =
+                          p.ip || p.host || p.name || discovery.event_type;
+                        const details = [
+                          p.port ? `port ${p.port}` : null,
+                          p.service && p.service !== "Unknown"
+                            ? String(p.service)
+                            : null,
+                          p.protocol ? String(p.protocol).toUpperCase() : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ");
+                        return (
+                          <div
+                            key={discovery.id}
                             style={{
-                              backgroundColor:
-                                discovery.status === "approved"
-                                  ? "var(--success-color)"
-                                  : discovery.status === "rejected"
-                                    ? "var(--danger-color)"
-                                    : "var(--background)",
-                              color:
-                                discovery.status === "pending"
-                                  ? "var(--text-secondary)"
-                                  : "white",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "0.5rem 0",
+                              borderBottom: "1px solid var(--border-color)",
                             }}
                           >
-                            {discovery.status}
-                          </span>
-                        </div>
-                      ))}
+                            <div>
+                              <div style={{ fontWeight: 500 }}>
+                                {String(title)}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                {details || discovery.source_service}
+                              </div>
+                            </div>
+                            <span
+                              className="badge"
+                              style={{
+                                backgroundColor:
+                                  discovery.status === "approved"
+                                    ? "var(--success-color)"
+                                    : discovery.status === "rejected"
+                                      ? "var(--danger-color)"
+                                      : "var(--background)",
+                                color:
+                                  discovery.status === "pending"
+                                    ? "var(--text-secondary)"
+                                    : "white",
+                              }}
+                            >
+                              {discovery.status}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
