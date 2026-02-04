@@ -779,6 +779,37 @@ async function checkScanCompletion(scanId: string): Promise<void> {
 // === Inspection Phase ===
 
 /**
+ * Skip deep inspection — complete the scan without inspecting databases.
+ * Called when user clicks "Skip Inspection" (sends empty targets array).
+ */
+export async function skipInspection(scanId: string): Promise<ScanRun> {
+  const scan = await getScanById(scanId);
+  if (!scan) {
+    throw new Error("Scan not found");
+  }
+
+  if (scan.status !== "awaiting_inspection") {
+    throw new Error(`Cannot skip inspection in status: ${scan.status}`);
+  }
+
+  // Mark inspection phase as skipped and complete the scan
+  await pool.query(
+    `UPDATE gateway.scan_runs
+     SET status = 'completed',
+         completed_at = NOW(),
+         phases = jsonb_set(phases, '{inspection,status}', '"completed"')
+     WHERE id = $1`,
+    [scanId],
+  );
+
+  scanEvents.emitComplete(scanId, "completed");
+
+  logger.info("Inspection skipped, scan completed", { scanId });
+
+  return (await getScanById(scanId))!;
+}
+
+/**
  * Trigger deep inspection for database candidates
  * Called after user provides credentials for selected candidates
  */

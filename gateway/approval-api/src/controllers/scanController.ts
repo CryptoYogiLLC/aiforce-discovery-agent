@@ -15,6 +15,7 @@ import {
   getScanDiscoveries,
   getScanCollectors,
   triggerInspection,
+  skipInspection,
   handleCollectorProgress,
   handleCollectorComplete,
   hasActiveScan,
@@ -429,8 +430,8 @@ export async function getScanEventsHandler(
 export const triggerInspectionValidation = [
   param("id").isUUID().withMessage("Valid scan ID is required"),
   body("targets")
-    .isArray({ min: 1 })
-    .withMessage("At least one target is required"),
+    .isArray()
+    .withMessage("Targets must be an array (empty to skip inspection)"),
   body("targets.*.host")
     .isString()
     .notEmpty()
@@ -477,6 +478,16 @@ export async function triggerInspectionHandler(
     }
 
     const targets = req.body.targets as InspectionTarget[];
+
+    // Empty targets = skip inspection, complete scan without deep inspection
+    if (targets.length === 0) {
+      const updated = await skipInspection(req.params.id);
+      res.json({
+        scan: updated,
+        message: "Inspection skipped. Scan completed.",
+      });
+      return;
+    }
 
     const updated = await triggerInspection(req.params.id, targets);
 
