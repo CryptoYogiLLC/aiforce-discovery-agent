@@ -85,6 +85,13 @@ repos:
         language: system
         types: [dockerfile]
 
+      - id: check-file-length
+        name: Check file length (Python 500, Go 500, TS 800)
+        entry: python3 scripts/check-file-length.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
   # Shell scripts
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.9.0.6

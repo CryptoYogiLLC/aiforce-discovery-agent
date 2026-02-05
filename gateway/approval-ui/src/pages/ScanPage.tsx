@@ -8,7 +8,6 @@ import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import type {
   ScanRun,
-  ScanPhase,
   ScanCollector,
   ScanDiscovery,
   InspectionTarget,
@@ -18,6 +17,8 @@ import {
   CandidateReviewPanel,
   CredentialEntryForm,
   InspectionProgress,
+  ScanSummaryView,
+  ScanDetailView,
 } from "../components/scans";
 
 type ScanView =
@@ -28,161 +29,6 @@ type ScanView =
   | "inspecting"
   | "detail"
   | "history";
-
-// Shared constants (match InspectionProgress.tsx)
-const phaseLabels: Record<string, string> = {
-  enumeration: "Enumeration",
-  identification: "Identification",
-  inspection: "Deep Inspection",
-  correlation: "Correlation",
-};
-
-const collectorLabels: Record<string, string> = {
-  "network-scanner": "Network Scanner",
-  "code-analyzer": "Code Analyzer",
-  "db-inspector": "DB Inspector",
-};
-
-const collectorIcons: Record<string, string> = {
-  "network-scanner": "🔍",
-  "code-analyzer": "📁",
-  "db-inspector": "🗄️",
-};
-
-const statusColors: Record<string, string> = {
-  pending: "var(--background)",
-  running: "var(--primary-color)",
-  completed: "var(--success-color)",
-  failed: "var(--danger-color)",
-};
-
-function formatDuration(start: string | null, end: string | null): string {
-  if (!start) return "--";
-  const startMs = new Date(start).getTime();
-  const endMs = end ? new Date(end).getTime() : Date.now();
-  const seconds = Math.floor((endMs - startMs) / 1000);
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-}
-
-function renderPhaseBreakdown(phases: Record<string, ScanPhase>): JSX.Element {
-  return (
-    <div className="card" style={{ marginBottom: "1rem" }}>
-      <h3 style={{ marginBottom: "1rem" }}>Phase Breakdown</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        {Object.entries(phases).map(([phaseName, phase]) => (
-          <div
-            key={phaseName}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "0.5rem 0",
-              borderBottom: "1px solid var(--border-color)",
-            }}
-          >
-            <span style={{ fontWeight: 500 }}>
-              {phaseLabels[phaseName] || phaseName}
-            </span>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
-            >
-              <span
-                style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}
-              >
-                {phase.discovery_count} found
-              </span>
-              <span
-                className="badge"
-                style={{
-                  backgroundColor:
-                    statusColors[phase.status] || "var(--background)",
-                  color:
-                    phase.status === "completed" || phase.status === "running"
-                      ? "white"
-                      : "var(--text-secondary)",
-                }}
-              >
-                {phase.status}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function renderCollectorList(collectors: ScanCollector[]): JSX.Element {
-  return (
-    <div className="card" style={{ marginBottom: "1rem" }}>
-      <h3 style={{ marginBottom: "1rem" }}>Collector Results</h3>
-      {collectors.length === 0 ? (
-        <div style={{ color: "var(--text-secondary)", textAlign: "center" }}>
-          No collector data
-        </div>
-      ) : (
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
-          {collectors.map((collector) => (
-            <div
-              key={collector.collector_name}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "0.5rem 0",
-                borderBottom: "1px solid var(--border-color)",
-              }}
-            >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
-                <span>{collectorIcons[collector.collector_name] || "📦"}</span>
-                <span style={{ fontWeight: 500 }}>
-                  {collectorLabels[collector.collector_name] ||
-                    collector.collector_name}
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  {collector.discovery_count} discoveries
-                </span>
-                <span
-                  className="badge"
-                  style={{
-                    backgroundColor:
-                      statusColors[collector.status] || "var(--background)",
-                    color:
-                      collector.status === "completed" ||
-                      collector.status === "running"
-                        ? "white"
-                        : "var(--text-secondary)",
-                  }}
-                >
-                  {collector.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ScanPage() {
   const { csrfToken, user } = useAuth();
@@ -509,106 +355,15 @@ export default function ScanPage() {
         );
 
       case "summary":
-        return (
-          <div>
-            <h1>Enumeration Complete</h1>
-            <p
-              style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}
-            >
-              The enumeration phase has finished. Review the results below.
-            </p>
-
-            {scan && (
-              <>
-                {/* Stats card */}
-                <div
-                  className="card"
-                  style={{
-                    marginBottom: "1rem",
-                    display: "flex",
-                    gap: "2rem",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Total Discoveries
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                      {scan.total_discoveries}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Duration
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                      {formatDuration(
-                        scan.started_at,
-                        new Date().toISOString(),
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Collectors
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                      {summaryCollectors.length}
-                    </div>
-                  </div>
-                </div>
-
-                {renderPhaseBreakdown(scan.phases)}
-                {renderCollectorList(summaryCollectors)}
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginTop: "1.5rem",
-                  }}
-                >
-                  <button
-                    className="btn btn-outline"
-                    onClick={handleSkipInspection}
-                    disabled={!canOperate}
-                  >
-                    Skip Inspection
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setCurrentView("candidates")}
-                    disabled={!canOperate}
-                  >
-                    Continue to Review Candidates
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        );
+        return scan ? (
+          <ScanSummaryView
+            scan={scan}
+            summaryCollectors={summaryCollectors}
+            canOperate={canOperate}
+            onSkipInspection={handleSkipInspection}
+            onContinueToReview={() => setCurrentView("candidates")}
+          />
+        ) : null;
 
       case "candidates":
         return (
@@ -704,195 +459,13 @@ export default function ScanPage() {
 
       case "detail":
         return (
-          <div>
-            <button
-              className="btn btn-outline"
-              onClick={handleBackToScans}
-              style={{ marginBottom: "1rem" }}
-            >
-              &larr; Back to Scans
-            </button>
-
-            {detailLoading ? (
-              <div style={{ padding: "2rem", textAlign: "center" }}>
-                Loading scan details...
-              </div>
-            ) : detailScan ? (
-              <>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "1.5rem",
-                  }}
-                >
-                  <h1 style={{ margin: 0 }}>Scan Details</h1>
-                  <span
-                    className="badge"
-                    style={{
-                      backgroundColor:
-                        detailScan.status === "completed"
-                          ? "var(--success-color)"
-                          : "var(--danger-color)",
-                      color: "white",
-                    }}
-                  >
-                    {detailScan.status}
-                  </span>
-                </div>
-
-                {/* Stats card */}
-                <div
-                  className="card"
-                  style={{
-                    marginBottom: "1rem",
-                    display: "flex",
-                    gap: "2rem",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Total Discoveries
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                      {detailScan.total_discoveries}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Duration
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                      {formatDuration(
-                        detailScan.started_at,
-                        detailScan.completed_at,
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        textTransform: "uppercase",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      Started
-                    </div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                      {detailScan.started_at
-                        ? new Date(detailScan.started_at).toLocaleString()
-                        : "--"}
-                    </div>
-                  </div>
-                </div>
-
-                {renderPhaseBreakdown(detailScan.phases)}
-                {renderCollectorList(detailCollectors)}
-
-                {/* Discoveries list */}
-                <div className="card">
-                  <h3 style={{ marginBottom: "1rem" }}>
-                    Discoveries ({detailDiscoveries.length})
-                  </h3>
-                  {detailDiscoveries.length === 0 ? (
-                    <div
-                      style={{
-                        color: "var(--text-secondary)",
-                        textAlign: "center",
-                        padding: "1rem",
-                      }}
-                    >
-                      No discoveries recorded
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      {detailDiscoveries.map((discovery) => {
-                        const p = discovery.payload || {};
-                        const title =
-                          p.ip || p.host || p.name || discovery.event_type;
-                        const details = [
-                          p.port ? `port ${p.port}` : null,
-                          p.service && p.service !== "Unknown"
-                            ? String(p.service)
-                            : null,
-                          p.protocol ? String(p.protocol).toUpperCase() : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" / ");
-                        return (
-                          <div
-                            key={discovery.id}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              padding: "0.5rem 0",
-                              borderBottom: "1px solid var(--border-color)",
-                            }}
-                          >
-                            <div>
-                              <div style={{ fontWeight: 500 }}>
-                                {String(title)}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "var(--text-secondary)",
-                                }}
-                              >
-                                {details || discovery.source_service}
-                              </div>
-                            </div>
-                            <span
-                              className="badge"
-                              style={{
-                                backgroundColor:
-                                  discovery.status === "approved"
-                                    ? "var(--success-color)"
-                                    : discovery.status === "rejected"
-                                      ? "var(--danger-color)"
-                                      : "var(--background)",
-                                color:
-                                  discovery.status === "pending"
-                                    ? "var(--text-secondary)"
-                                    : "white",
-                              }}
-                            >
-                              {discovery.status}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : null}
-          </div>
+          <ScanDetailView
+            detailScan={detailScan}
+            detailCollectors={detailCollectors}
+            detailDiscoveries={detailDiscoveries}
+            detailLoading={detailLoading}
+            onBack={handleBackToScans}
+          />
         );
 
       case "start":
