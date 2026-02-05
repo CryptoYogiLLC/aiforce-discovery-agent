@@ -40,10 +40,40 @@ class Settings(BaseSettings):
     dryrun_mode: bool = Field(default=False, alias="DRYRUN_MODE")
     sample_repos_path: str = Field(default="/repos", alias="SAMPLE_REPOS_PATH")
 
+    # Phase 1: Git history analysis
+    analyze_git_history: bool = Field(
+        default=True, alias="CODEANALYZER_ANALYZE_GIT_HISTORY"
+    )
+    git_history_max_commits: int = Field(
+        default=5000, alias="CODEANALYZER_GIT_HISTORY_MAX_COMMITS"
+    )
+
+    # Phase 1: Vulnerability scanning (DISABLED by default)
+    vuln_scan_enabled: bool = Field(
+        default=False, alias="CODEANALYZER_VULN_SCAN_ENABLED"
+    )
+    vuln_scan_offline_mode: bool = Field(
+        default=True, alias="CODEANALYZER_VULN_SCAN_OFFLINE_MODE"
+    )
+    vuln_db_path: str = Field(
+        default="/data/osv-database.json", alias="CODEANALYZER_VULN_DB_PATH"
+    )
+
+    # Phase 1: EOL checking
+    eol_check_enabled: bool = Field(
+        default=True, alias="CODEANALYZER_EOL_CHECK_ENABLED"
+    )
+    eol_data_path: str = Field(default="", alias="CODEANALYZER_EOL_DATA_PATH")
+
     @property
     def excluded_dirs_list(self) -> list[str]:
         """Get excluded directories as a list."""
         return [d.strip() for d in self.excluded_dirs.split(",") if d.strip()]
+
+    @property
+    def is_full_clone(self) -> bool:
+        """Check if full clone is requested (for git history analysis)."""
+        return self.clone_depth.lower() == "full"
 
     model_config = {"env_prefix": "CODEANALYZER_", "case_sensitive": False}
 

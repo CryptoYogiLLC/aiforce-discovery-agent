@@ -35,11 +35,12 @@ type CloudEvent struct {
 
 // ServerDiscoveredData represents data for a discovered server event.
 type ServerDiscoveredData struct {
-	ServerID    string   `json:"server_id"`
-	Hostname    string   `json:"hostname,omitempty"`
-	IPAddresses []string `json:"ip_addresses"`
-	OpenPorts   []int    `json:"open_ports"`
-	OS          *OSInfo  `json:"os,omitempty"`
+	ServerID    string                 `json:"server_id"`
+	Hostname    string                 `json:"hostname,omitempty"`
+	IPAddresses []string               `json:"ip_addresses"`
+	OpenPorts   []int                  `json:"open_ports"`
+	OS          *OSInfo                `json:"os,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"` // Phase 1: cloud_provider, hosting_model
 }
 
 // ServiceDiscoveredData represents data for a discovered service event.

@@ -13,16 +13,25 @@
     },
     "data": {
       "type": "object",
-      "required": ["ip_address", "scan_timestamp"],
+      "required": ["server_id", "ip_addresses"],
       "properties": {
-        "ip_address": {
+        "server_id": {
           "type": "string",
-          "format": "ipv4",
-          "description": "IP address of the discovered server"
+          "format": "uuid",
+          "description": "Unique identifier for this server discovery"
         },
         "hostname": {
           "type": "string",
           "description": "Resolved hostname (if available)"
+        },
+        "ip_addresses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "ipv4"
+          },
+          "minItems": 1,
+          "description": "IP addresses associated with this server"
         },
         "mac_address": {
           "type": "string",
@@ -32,53 +41,46 @@
         "open_ports": {
           "type": "array",
           "items": {
-            "type": "object",
-            "required": ["port", "protocol"],
-            "properties": {
-              "port": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 65535
-              },
-              "protocol": {
-                "type": "string",
-                "enum": ["tcp", "udp"]
-              },
-              "service": {
-                "type": "string",
-                "description": "Detected service name"
-              },
-              "version": {
-                "type": "string",
-                "description": "Detected service version"
-              }
-            }
-          }
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "description": "List of open ports discovered on the server"
         },
-        "os_fingerprint": {
+        "os": {
           "type": "object",
           "properties": {
-            "family": {
+            "name": {
               "type": "string",
-              "enum": ["linux", "windows", "macos", "unix", "unknown"]
+              "description": "Operating system name"
             },
             "version": {
-              "type": "string"
+              "type": "string",
+              "description": "Operating system version"
             },
-            "confidence": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1
+            "family": {
+              "type": "string",
+              "enum": ["linux", "windows", "macos", "unix", "unknown"],
+              "description": "Operating system family"
+            }
+          },
+          "description": "Operating system information from fingerprinting"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional metadata (cloud_provider, hosting_model for Phase 1)",
+          "properties": {
+            "cloud_provider": {
+              "type": "string",
+              "enum": ["aws", "azure", "gcp", "other", "none"],
+              "description": "Inferred cloud provider from IP range (Phase 1)"
+            },
+            "hosting_model": {
+              "type": "string",
+              "enum": ["cloud", "on_premises", "hybrid", "unknown"],
+              "description": "Inferred hosting model (Phase 1)"
             }
           }
-        },
-        "scan_timestamp": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "scan_duration_ms": {
-          "type": "integer",
-          "minimum": 0
         }
       }
     }

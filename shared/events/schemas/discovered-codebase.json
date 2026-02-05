@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/discovered-codebase.json",
+  "title": "Codebase Discovered Event",
+  "description": "Event emitted with codebase metrics from repository analysis",
+  "allOf": [{ "$ref": "cloudevent-base.json" }],
+  "properties": {
+    "type": {
+      "const": "discovery.codebase.discovered"
+    },
+    "source": {
+      "const": "/collectors/code-analyzer"
+    },
+    "data": {
+      "type": "object",
+      "required": ["analysis_id", "repository_url", "metrics", "discovered_at"],
+      "properties": {
+        "analysis_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier linking to repository analysis"
+        },
+        "repository_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the analyzed repository"
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Codebase metrics",
+          "properties": {
+            "total_files": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total number of files in repository"
+            },
+            "total_lines": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total lines of code"
+            },
+            "code_lines": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Lines of actual code (excluding comments/blanks)"
+            },
+            "comment_lines": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Lines of comments"
+            },
+            "blank_lines": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Blank lines"
+            },
+            "avg_cyclomatic_complexity": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Average cyclomatic complexity"
+            },
+            "max_cyclomatic_complexity": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum cyclomatic complexity in any function"
+            },
+            "test_file_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of test files"
+            },
+            "test_coverage_percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Test coverage percentage if available"
+            },
+            "documentation_ratio": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Ratio of documented functions/classes"
+            }
+          }
+        },
+        "git_history": {
+          "type": "object",
+          "description": "Git history metrics (Phase 1)",
+          "properties": {
+            "total_commits": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "contributors_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "first_commit_date": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "last_commit_date": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "commit_frequency": {
+              "type": "string",
+              "enum": ["daily", "weekly", "monthly", "sporadic", "inactive"],
+              "description": "Commit frequency pattern"
+            }
+          }
+        },
+        "discovered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when metrics were calculated"
+        }
+      }
+    }
+  }
+}

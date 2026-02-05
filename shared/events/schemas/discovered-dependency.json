@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/discovered-dependency.json",
+  "title": "Dependency Discovered Event",
+  "description": "Event emitted when a dependency is discovered in a repository",
+  "allOf": [{ "$ref": "cloudevent-base.json" }],
+  "properties": {
+    "type": {
+      "const": "discovery.dependency.discovered"
+    },
+    "source": {
+      "const": "/collectors/code-analyzer"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "analysis_id",
+        "repository_url",
+        "dependency",
+        "discovered_at"
+      ],
+      "properties": {
+        "analysis_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier linking to repository analysis"
+        },
+        "repository_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the repository containing this dependency"
+        },
+        "dependency": {
+          "type": "object",
+          "required": ["name", "ecosystem"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Dependency name/package name"
+            },
+            "version": {
+              "type": "string",
+              "description": "Declared version or version range"
+            },
+            "resolved_version": {
+              "type": "string",
+              "description": "Actual resolved version if different from declared"
+            },
+            "ecosystem": {
+              "type": "string",
+              "enum": [
+                "npm",
+                "pypi",
+                "maven",
+                "gradle",
+                "nuget",
+                "go",
+                "cargo",
+                "rubygems",
+                "composer",
+                "other"
+              ],
+              "description": "Package ecosystem"
+            },
+            "scope": {
+              "type": "string",
+              "enum": ["runtime", "dev", "optional", "peer", "build"],
+              "description": "Dependency scope"
+            },
+            "source_file": {
+              "type": "string",
+              "description": "File where dependency was declared (e.g., package.json)"
+            },
+            "is_direct": {
+              "type": "boolean",
+              "description": "True if direct dependency, false if transitive"
+            },
+            "license": {
+              "type": "string",
+              "description": "Detected license if available"
+            },
+            "vulnerabilities": {
+              "type": "array",
+              "description": "Known vulnerabilities (Phase 1 - requires OSV)",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Vulnerability ID (CVE, GHSA, etc.)"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["critical", "high", "medium", "low", "unknown"]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "Brief description"
+                  },
+                  "fixed_version": {
+                    "type": "string",
+                    "description": "Version that fixes the vulnerability"
+                  }
+                }
+              }
+            },
+            "eol_status": {
+              "type": "object",
+              "description": "End-of-life status (Phase 1)",
+              "properties": {
+                "is_eol": {
+                  "type": "boolean",
+                  "description": "True if dependency is end-of-life"
+                },
+                "eol_date": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "EOL date if known"
+                },
+                "support_status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "maintenance",
+                    "security_only",
+                    "eol",
+                    "unknown"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "discovered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when dependency was discovered"
+        }
+      }
+    }
+  }
+}

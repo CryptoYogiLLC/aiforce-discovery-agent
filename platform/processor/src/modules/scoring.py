@@ -78,12 +78,20 @@ class ScoringModule:
         risk_score = self._calculate_risk(data)
         effort_score = self._calculate_effort(data, complexity_score)
 
+        # Phase 2: Calculate readiness scores
+        cloud_readiness = self._calculate_cloud_readiness(data, complexity_score)
+        migration_readiness = self._calculate_migration_readiness(
+            data, complexity_score, risk_score, effort_score
+        )
+
         # Add scoring metadata
         scored["scoring"] = {
-            "version": "1.0.0",
+            "version": "2.0.0",
             "complexity_score": complexity_score,
             "risk_score": risk_score,
             "effort_score": effort_score,
+            "cloud_readiness": cloud_readiness,
+            "migration_readiness": migration_readiness,
             "overall_score": self._calculate_overall(
                 complexity_score, risk_score, effort_score
             ),
@@ -282,3 +290,133 @@ class ScoringModule:
             factors.append("Contains PII")
 
         return factors
+
+    def _calculate_cloud_readiness(
+        self, data: dict[str, Any], complexity: int
+    ) -> float:
+        """Calculate cloud readiness score (0.0-1.0).
+
+        Phase 2: Explainable cloud readiness scoring.
+        Higher score = more ready for cloud migration.
+
+        Args:
+            data: The item data
+            complexity: Complexity score
+
+        Returns:
+            Cloud readiness score from 0.0 to 1.0
+        """
+        score = 0.5  # Start at neutral
+
+        enrichment = data.get("enrichment", {})
+
+        # Cloud-native technologies boost readiness
+        cloud_native_techs = [
+            "docker",
+            "kubernetes",
+            "kafka",
+            "redis",
+            "postgresql",
+            "mongodb",
+            "elasticsearch",
+            "rabbitmq",
+            "fastapi",
+            "express.js",
+        ]
+
+        # Legacy technologies reduce readiness
+        legacy_techs = ["oracle", "db2", "mssql", ".net", "cobol"]
+
+        technology = enrichment.get("technology", "").lower()
+        frameworks = [f.lower() for f in enrichment.get("frameworks", [])]
+
+        # Check for cloud-native
+        if any(tech in technology for tech in cloud_native_techs):
+            score += 0.2
+        if any(tech in f for tech in cloud_native_techs for f in frameworks):
+            score += 0.15
+
+        # Check for legacy
+        if any(tech in technology for tech in legacy_techs):
+            score -= 0.25
+        if any(tech in f for tech in legacy_techs for f in frameworks):
+            score -= 0.2
+
+        # Container presence is a strong positive signal
+        if data.get("has_dockerfile") or "docker" in str(data).lower():
+            score += 0.2
+
+        # Lower complexity = higher cloud readiness
+        complexity_factor = (10 - complexity) / 20  # -0.5 to +0.45
+        score += complexity_factor
+
+        # Stateless services are more cloud-ready
+        entity_label = enrichment.get("entity_label", "")
+        if entity_label in ["APIService", "WebApplication"]:
+            score += 0.1
+        elif entity_label in ["BatchJob"]:
+            score += 0.05
+
+        # Cloud metadata from Phase 1
+        metadata = data.get("metadata", {})
+        if metadata.get("cloud_provider") and metadata.get("cloud_provider") != "none":
+            score += 0.15  # Already in cloud
+
+        return max(0.0, min(1.0, round(score, 2)))
+
+    def _calculate_migration_readiness(
+        self,
+        data: dict[str, Any],
+        complexity: int,
+        risk: int,
+        effort: int,
+    ) -> float:
+        """Calculate migration readiness score (0.0-1.0).
+
+        Phase 2: Composite score indicating overall migration readiness.
+        Higher score = more ready for migration.
+
+        Args:
+            data: The item data
+            complexity: Complexity score
+            risk: Risk score
+            effort: Effort score
+
+        Returns:
+            Migration readiness score from 0.0 to 1.0
+        """
+        # Base score from inverted scores (lower = better readiness)
+        complexity_factor = (10 - complexity) / 10
+        risk_factor = (10 - risk) / 10
+        effort_factor = (10 - effort) / 10
+
+        # Weighted combination
+        base_score = (
+            complexity_factor * 0.25 + risk_factor * 0.35 + effort_factor * 0.40
+        )
+
+        # Adjustments based on specific factors
+        enrichment = data.get("enrichment", {})
+
+        # Non-production is easier to migrate
+        environment = enrichment.get("environment", "")
+        if environment == "development":
+            base_score += 0.1
+        elif environment == "staging":
+            base_score += 0.05
+        elif environment == "production":
+            base_score -= 0.05
+
+        # Well-documented code is easier
+        dependencies = data.get("dependencies", [])
+        if len(dependencies) < 20:
+            base_score += 0.05
+
+        # Modern architecture patterns help
+        architecture = data.get("architecture_pattern", "")
+        if architecture in ["microservice", "serverless"]:
+            base_score += 0.1
+        elif architecture == "monolith":
+            base_score -= 0.05
+
+        return max(0.0, min(1.0, round(base_score, 2)))

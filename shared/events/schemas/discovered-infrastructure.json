@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiforce-discovery-agent/schemas/discovered-infrastructure.json",
+  "title": "Infrastructure Discovered Event",
+  "description": "Event emitted when infrastructure details are discovered via SSH probe (Phase 4)",
+  "allOf": [{ "$ref": "cloudevent-base.json" }],
+  "properties": {
+    "type": {
+      "const": "discovery.infrastructure.discovered"
+    },
+    "source": {
+      "const": "/collectors/infra-probe"
+    },
+    "data": {
+      "type": "object",
+      "required": ["probe_id", "target_ip", "discovered_at"],
+      "properties": {
+        "probe_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for this probe execution"
+        },
+        "server_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Reference to network-scanner server discovery"
+        },
+        "target_ip": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "IP address probed"
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Hostname from system"
+        },
+        "operating_system": {
+          "type": "object",
+          "description": "OS details from system commands",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "OS name (e.g., Ubuntu, CentOS, Windows Server)"
+            },
+            "version": {
+              "type": "string",
+              "description": "OS version"
+            },
+            "kernel": {
+              "type": "string",
+              "description": "Kernel version"
+            },
+            "architecture": {
+              "type": "string",
+              "enum": ["x86_64", "aarch64", "i386", "arm", "other"],
+              "description": "CPU architecture"
+            },
+            "distribution": {
+              "type": "string",
+              "description": "Linux distribution if applicable"
+            }
+          }
+        },
+        "hardware": {
+          "type": "object",
+          "description": "Hardware specifications",
+          "properties": {
+            "cpu_cores": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of CPU cores"
+            },
+            "cpu_model": {
+              "type": "string",
+              "description": "CPU model name"
+            },
+            "memory_gb": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Total RAM in GB"
+            },
+            "disk_total_gb": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Total disk space in GB"
+            },
+            "disk_used_gb": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Used disk space in GB"
+            },
+            "is_virtual": {
+              "type": "boolean",
+              "description": "True if running in a VM/container"
+            },
+            "virtualization_type": {
+              "type": "string",
+              "enum": [
+                "vmware",
+                "kvm",
+                "hyperv",
+                "xen",
+                "docker",
+                "lxc",
+                "none",
+                "unknown"
+              ],
+              "description": "Virtualization technology if virtual"
+            }
+          }
+        },
+        "installed_software": {
+          "type": "array",
+          "description": "List of installed software packages",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Package/software name"
+              },
+              "version": {
+                "type": "string",
+                "description": "Installed version"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "package",
+                  "runtime",
+                  "database",
+                  "webserver",
+                  "application",
+                  "other"
+                ],
+                "description": "Software category"
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "apt",
+                  "yum",
+                  "dnf",
+                  "pacman",
+                  "brew",
+                  "pip",
+                  "npm",
+                  "manual",
+                  "other"
+                ],
+                "description": "Package manager or installation source"
+              }
+            }
+          }
+        },
+        "running_services": {
+          "type": "array",
+          "description": "List of running services/processes",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Service/process name"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["running", "stopped", "unknown"]
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535,
+                "description": "Port if listening"
+              },
+              "user": {
+                "type": "string",
+                "description": "User running the service"
+              }
+            }
+          }
+        },
+        "network_config": {
+          "type": "object",
+          "description": "Network configuration",
+          "properties": {
+            "interfaces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "ip_address": { "type": "string" },
+                  "mac_address": { "type": "string" },
+                  "is_primary": { "type": "boolean" }
+                }
+              }
+            },
+            "default_gateway": {
+              "type": "string",
+              "format": "ipv4"
+            },
+            "dns_servers": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "discovered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when infrastructure was probed"
+        }
+      }
+    }
+  }
+}

@@ -1,12 +1,16 @@
 """Batch processing logic for approved discoveries."""
 
 import asyncio
+import gzip
+import json
 import logging
 from collections import deque
 from typing import Any
 
 from .client import APIClient, TransmissionError
 from .database import Database
+from .neo4j_mapper import Neo4jMapper
+from .claim_builder import ClaimBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +24,22 @@ class BatchProcessor:
         batch_interval_s: int,
         api_client: APIClient,
         database: Database,
+        output_format: str = "raw",
+        max_claims_per_entity: int = 50,
+        warn_batch_size_mb: float = 1.0,
+        max_batch_size_mb: float = 10.0,
     ):
         self.batch_size = batch_size
         self.batch_interval_s = batch_interval_s
         self.api_client = api_client
         self.database = database
+        self.output_format = output_format
+        self.warn_batch_size_mb = warn_batch_size_mb
+        self.max_batch_size_mb = max_batch_size_mb
+
+        # Phase 3: Neo4j format support
+        self._neo4j_mapper = Neo4jMapper() if output_format == "neo4j" else None
+        self._claim_builder = ClaimBuilder(max_claims=max_claims_per_entity)
 
         self._queue: deque[dict[str, Any]] = deque()
         self._running = False
@@ -94,6 +109,56 @@ class BatchProcessor:
 
         logger.info("Batch processor stopped")
 
+    def _transform_batch(self, items: list[dict[str, Any]]) -> dict[str, Any]:
+        """Transform batch based on output format.
+
+        Phase 3: Support raw (backward compatible) and neo4j formats.
+        """
+        if self.output_format == "neo4j" and self._neo4j_mapper:
+            # Transform to Neo4j format
+            batch_data = self._neo4j_mapper.map_batch(items)
+
+            # Add claims for each entity
+            all_claims = []
+            for item in items:
+                claims = self._claim_builder.build_claims(item)
+                all_claims.extend(claims)
+            batch_data["claims"] = all_claims
+            batch_data["metadata"]["claim_count"] = len(all_claims)
+
+            return batch_data
+        else:
+            # Raw format (backward compatible)
+            return {
+                "format": "raw",
+                "version": "1.0.0",
+                "items": items,
+                "metadata": {
+                    "item_count": len(items),
+                },
+            }
+
+    def _check_batch_size(self, payload: dict[str, Any]) -> tuple[bool, float]:
+        """Check if batch size is within limits.
+
+        Returns:
+            Tuple of (is_valid, size_mb)
+        """
+        payload_json = json.dumps(payload)
+        compressed = gzip.compress(payload_json.encode())
+        size_mb = len(compressed) / (1024 * 1024)
+
+        if size_mb > self.max_batch_size_mb:
+            logger.error(
+                f"Batch too large: {size_mb:.2f}MB > {self.max_batch_size_mb}MB"
+            )
+            return False, size_mb
+
+        if size_mb > self.warn_batch_size_mb:
+            logger.warning(f"Large batch: {size_mb:.2f}MB")
+
+        return True, size_mb
+
     async def _process_batch(self) -> None:
         """Process a single batch of items."""
         if len(self._queue) == 0:
@@ -105,6 +170,18 @@ class BatchProcessor:
             items.append(self._queue.popleft())
 
         if len(items) == 0:
+            return
+
+        # Transform batch based on output format
+        transformed = self._transform_batch(items)
+
+        # Check batch size
+        is_valid, size_mb = self._check_batch_size(transformed)
+        if not is_valid:
+            # Re-queue items and fail
+            for item in reversed(items):
+                self._queue.appendleft(item)
+            logger.error(f"Batch rejected: exceeds {self.max_batch_size_mb}MB limit")
             return
 
         # Calculate payload size

@@ -5,7 +5,8 @@
 #   docker-compose up -d                    # Start core infrastructure
 #   docker-compose --profile network up -d  # Include network scanner
 #   docker-compose --profile database up -d # Include database inspector
-#   docker-compose --profile code up -d     # Include code analyzer (Phase 2)
+#   docker-compose --profile code up -d     # Include code analyzer
+#   docker-compose --profile infra up -d    # Include infrastructure probe
 #   docker-compose --profile all up -d      # Start everything
 #   docker-compose down                     # Stop all services
 #   docker-compose down -v                  # Stop and remove volumes
@@ -141,6 +142,38 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - discovery-network
+    restart: unless-stopped
+
+  infra-probe:
+    build:
+      context: ./collectors/infra-probe
+      dockerfile: Dockerfile
+    container_name: discovery-infra-probe
+    profiles: ["infra", "all"]
+    ports:
+      - "8004:8004"
+    environment:
+      INFRAPROBE_RABBITMQ_URL: amqp://discovery:${RABBITMQ_PASSWORD:-discovery}@rabbitmq:5672/
+      INFRAPROBE_LOG_LEVEL: ${LOG_LEVEL:-info}
+      INFRAPROBE_SSH_TIMEOUT_S: ${INFRAPROBE_SSH_TIMEOUT_S:-30}
+      INFRAPROBE_MAX_CONCURRENT_PROBES: ${INFRAPROBE_MAX_CONCURRENT_PROBES:-10}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     networks:
       - discovery-network
     restart: unless-stopped

@@ -53,9 +53,15 @@ class EnrichmentModule:
 
         # Add enrichment metadata
         enriched["enrichment"] = {
-            "version": "1.0.0",
+            "version": "2.0.0",
             "applied": True,
         }
+
+        # Phase 2: Add entity classification
+        entity_type = self._detect_entity_type(data)
+        entity_info = self._classify_entity(entity_type, data)
+        enriched["enrichment"]["entity_label"] = entity_info["label"]
+        enriched["enrichment"]["entity_category"] = entity_info["category"]
 
         # Enrich based on entity type
         entity_type = self._detect_entity_type(data)
@@ -213,3 +219,85 @@ class EnrichmentModule:
                 detected.append(framework)
 
         return detected
+
+    def _classify_entity(
+        self, entity_type: str, data: dict[str, Any]
+    ) -> dict[str, str]:
+        """Classify entity with label and category.
+
+        Phase 2: Entity classification for Neo4j mapping.
+
+        Returns:
+            Dict with entity_label and entity_category
+        """
+        # Entity label mappings (used in Neo4j)
+        label_map = {
+            "server": "Server",
+            "service": "Service",
+            "database": "Database",
+            "repository": "Application",
+            "infrastructure": "Infrastructure",
+            "unknown": "Entity",
+        }
+
+        # Entity category mappings
+        category_map = {
+            "server": "compute",
+            "service": "compute",
+            "database": "storage",
+            "repository": "application",
+            "infrastructure": "compute",
+            "unknown": "other",
+        }
+
+        # Refine classification based on data
+        label = label_map.get(entity_type, "Entity")
+        category = category_map.get(entity_type, "other")
+
+        # Refine service classification
+        if entity_type == "service":
+            enrichment = data.get("enrichment", {})
+            svc_category = enrichment.get("category", "")
+            if svc_category == "database":
+                label = "Database"
+                category = "storage"
+            elif svc_category == "messaging":
+                label = "MessageBroker"
+                category = "messaging"
+            elif svc_category == "cache":
+                label = "Cache"
+                category = "storage"
+            elif svc_category == "search":
+                label = "SearchEngine"
+                category = "storage"
+
+        # Refine database classification
+        if entity_type == "database":
+            db_category = data.get("enrichment", {}).get("db_category", "")
+            if db_category == "relational":
+                label = "RelationalDatabase"
+            elif db_category == "document":
+                label = "DocumentDatabase"
+            elif db_category == "key-value":
+                label = "KeyValueStore"
+            elif db_category == "search":
+                label = "SearchEngine"
+
+        # Refine repository classification
+        if entity_type == "repository":
+            app_type = data.get("application_type", "")
+            if app_type == "api_service":
+                label = "APIService"
+            elif app_type == "web_application":
+                label = "WebApplication"
+            elif app_type == "batch_job":
+                label = "BatchJob"
+            elif app_type == "library":
+                label = "Library"
+            elif app_type == "cli_tool":
+                label = "CLITool"
+
+        return {
+            "label": label,
+            "category": category,
+        }
