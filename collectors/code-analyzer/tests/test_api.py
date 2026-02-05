@@ -9,7 +9,8 @@ from unittest.mock import patch, MagicMock
 def client():
     """Create test client."""
     # Import app after aio_pika is mocked in conftest.py
-    from src.main import app, app_state
+    from src.main import app
+    from src.rabbitmq import app_state
 
     # Mock RabbitMQ connection state
     mock_connection = MagicMock()
@@ -34,14 +35,15 @@ class TestHealthEndpoints:
 
     def test_ready_endpoint_without_rabbitmq(self):
         """Should return 503 when RabbitMQ is not available."""
-        from src.main import app, app_state
+        from src.main import app
+        from src.rabbitmq import app_state
 
         # Set connection to None to simulate no RabbitMQ
         original_connection = app_state["rabbitmq_connection"]
         app_state["rabbitmq_connection"] = None
 
         try:
-            with patch("src.main.get_rabbitmq_connection") as mock_conn:
+            with patch("src.rabbitmq.get_rabbitmq_connection") as mock_conn:
                 mock_conn.side_effect = Exception("Connection failed")
                 test_client = TestClient(app, raise_server_exceptions=False)
                 response = test_client.get("/ready")
