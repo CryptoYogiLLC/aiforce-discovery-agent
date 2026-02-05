@@ -3,6 +3,7 @@
 SECURITY: Tests verify that credentials are never exposed.
 """
 
+import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -135,24 +136,25 @@ class TestSSHProbe:
             password="secretpassword",
         )
 
-        with patch("src.ssh_probe.paramiko") as mock_paramiko:
-            # Mock successful connection
-            mock_client = MagicMock()
-            mock_paramiko.SSHClient.return_value = mock_client
-            mock_paramiko.AutoAddPolicy.return_value = MagicMock()
+        # Create mock paramiko module
+        mock_paramiko = MagicMock()
+        mock_client = MagicMock()
+        mock_paramiko.SSHClient.return_value = mock_client
+        mock_paramiko.AutoAddPolicy.return_value = MagicMock()
 
-            # Mock exec_command to return empty results
-            mock_stdout = MagicMock()
-            mock_stdout.read.return_value = b""
-            mock_stdout.channel.recv_exit_status.return_value = 0
-            mock_stderr = MagicMock()
-            mock_stderr.read.return_value = b""
-            mock_client.exec_command.return_value = (
-                MagicMock(),
-                mock_stdout,
-                mock_stderr,
-            )
+        # Mock exec_command to return empty results
+        mock_stdout = MagicMock()
+        mock_stdout.read.return_value = b""
+        mock_stdout.channel.recv_exit_status.return_value = 0
+        mock_stderr = MagicMock()
+        mock_stderr.read.return_value = b""
+        mock_client.exec_command.return_value = (
+            MagicMock(),
+            mock_stdout,
+            mock_stderr,
+        )
 
+        with patch.dict(sys.modules, {"paramiko": mock_paramiko}):
             await probe.probe("192.168.1.100", creds)
 
         # Credentials should be cleared
@@ -167,13 +169,14 @@ class TestSSHProbe:
             password="secretpassword",
         )
 
-        with patch("src.ssh_probe.paramiko") as mock_paramiko:
-            # Mock connection failure
-            mock_client = MagicMock()
-            mock_client.connect.side_effect = Exception("Connection refused")
-            mock_paramiko.SSHClient.return_value = mock_client
-            mock_paramiko.AutoAddPolicy.return_value = MagicMock()
+        # Create mock paramiko module
+        mock_paramiko = MagicMock()
+        mock_client = MagicMock()
+        mock_client.connect.side_effect = Exception("Connection refused")
+        mock_paramiko.SSHClient.return_value = mock_client
+        mock_paramiko.AutoAddPolicy.return_value = MagicMock()
 
+        with patch.dict(sys.modules, {"paramiko": mock_paramiko}):
             result = await probe.probe("192.168.1.100", creds)
 
         # Credentials should still be cleared
@@ -188,12 +191,14 @@ class TestSSHProbe:
         probe = SSHProbe()
         creds = ProbeCredentials(username="testuser", password="pass")
 
-        with patch("src.ssh_probe.paramiko") as mock_paramiko:
-            mock_client = MagicMock()
-            mock_client.connect.side_effect = Exception("Connection refused")
-            mock_paramiko.SSHClient.return_value = mock_client
-            mock_paramiko.AutoAddPolicy.return_value = MagicMock()
+        # Create mock paramiko module
+        mock_paramiko = MagicMock()
+        mock_client = MagicMock()
+        mock_client.connect.side_effect = Exception("Connection refused")
+        mock_paramiko.SSHClient.return_value = mock_client
+        mock_paramiko.AutoAddPolicy.return_value = MagicMock()
 
+        with patch.dict(sys.modules, {"paramiko": mock_paramiko}):
             result = await probe.probe("192.168.1.100", creds)
 
         assert result.probe_id is not None
@@ -205,12 +210,14 @@ class TestSSHProbe:
         probe = SSHProbe()
         creds = ProbeCredentials(username="testuser", password="pass")
 
-        with patch("src.ssh_probe.paramiko") as mock_paramiko:
-            mock_client = MagicMock()
-            mock_client.connect.side_effect = Exception("Connection refused")
-            mock_paramiko.SSHClient.return_value = mock_client
-            mock_paramiko.AutoAddPolicy.return_value = MagicMock()
+        # Create mock paramiko module
+        mock_paramiko = MagicMock()
+        mock_client = MagicMock()
+        mock_client.connect.side_effect = Exception("Connection refused")
+        mock_paramiko.SSHClient.return_value = mock_client
+        mock_paramiko.AutoAddPolicy.return_value = MagicMock()
 
+        with patch.dict(sys.modules, {"paramiko": mock_paramiko}):
             result = await probe.probe(
                 "192.168.1.100",
                 creds,
@@ -228,15 +235,16 @@ class TestSSHProbe:
             password="supersecretpassword123",
         )
 
-        with patch("src.ssh_probe.paramiko") as mock_paramiko:
-            # Mock connection failure with message containing password
-            mock_client = MagicMock()
-            mock_client.connect.side_effect = Exception(
-                "Authentication failed for supersecretpassword123"
-            )
-            mock_paramiko.SSHClient.return_value = mock_client
-            mock_paramiko.AutoAddPolicy.return_value = MagicMock()
+        # Create mock paramiko module
+        mock_paramiko = MagicMock()
+        mock_client = MagicMock()
+        mock_client.connect.side_effect = Exception(
+            "Authentication failed for supersecretpassword123"
+        )
+        mock_paramiko.SSHClient.return_value = mock_client
+        mock_paramiko.AutoAddPolicy.return_value = MagicMock()
 
+        with patch.dict(sys.modules, {"paramiko": mock_paramiko}):
             result = await probe.probe("192.168.1.100", creds)
 
         # Error message should not contain the password
