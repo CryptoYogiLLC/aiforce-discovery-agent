@@ -98,7 +98,7 @@ jobs:
           fi
 
       - name: Upload bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: airgap-bundle-${{ github.sha }}
           path: discovery-agent-airgap-*.tar.gz

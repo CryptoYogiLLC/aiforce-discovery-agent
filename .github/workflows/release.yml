@@ -45,7 +45,7 @@ jobs:
           go build -ldflags="-s -w" -o bin/network-scanner-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} cmd/main.go
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: network-scanner-${{ matrix.goos }}-${{ matrix.goarch }}
           path: collectors/network-scanner/bin/
@@ -181,7 +181,7 @@ jobs:
 
       - name: Upload Helm chart
         if: steps.check.outputs.exists == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: helm-chart
           path: "*.tgz"
