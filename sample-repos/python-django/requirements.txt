@@ -5,7 +5,7 @@ celery==5.3.0
 redis==5.0.0
 
 # Known vulnerability for testing (CVE-2023-32681)
-requests==2.32.4
+requests==2.33.0
 
 # API and utilities
 djangorestframework==3.15.2
